@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QG do Aluno - Gerador de Papiro ESA 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #020617; /* Slate 950 */
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(22, 101, 52, 0.1), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(30, 58, 138, 0.1), transparent 25%);
+            background-attachment: fixed;
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glassmorphism Refinado */
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Botão Tático Animado */
+        .btn-tactical {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .btn-tactical::after {
+            content: '';
+            position: absolute;
+            top: -50%; right: -50%; bottom: -50%; left: -50%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+            transform: rotateZ(60deg) translate(-5em, 7.5em);
+            opacity: 0;
+            transition: all 1s ease;
+        }
+        .btn-tactical:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(22, 163, 74, 0.4);
+        }
+        .btn-tactical:hover::after {
+            opacity: 1;
+            transform: rotateZ(60deg) translate(1em, -11em);
+        }
+
+        /* Scanline para o Dossiê */
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            position: absolute;
+            pointer-events: none;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(34,197,94,0.1) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1;
+            animation: scanline 6s linear infinite;
+        }
+        @keyframes scanline {
+            0% { top: -100px; }
+            100% { top: 100%; }
+        }
+
+        /* Animações UI */
+        .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Chat IA Sargento */
+        #chat-ia {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: bottom right;
+        }
+        .chat-hidden {
+            opacity: 0;
+            transform: scale(0.8) translateY(20px);
+            pointer-events: none;
+        }
+        .chat-visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+        .chat-message {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Sistema de Scroll Customizado Tático (Sargento IA) */
+        #chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-messages::-webkit-scrollbar-track {
+            background: #020617; /* Fundo escuro */
+            border-radius: 10px;
+        }
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(22, 163, 74, 0.4); /* Verde militar com opacidade */
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        #chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(22, 163, 74, 0.8); /* Verde mais forte no hover */
+        }
+
+        /* Custom Select */
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.2em;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden">
+
+    <div class="max-w-4xl w-full z-10">
+        
+        <!-- Cabeçalho -->
+        <div class="text-center mb-10 fade-in-up" style="animation-delay: 0.1s;">
+            <div class="inline-flex items-center gap-2 bg-slate-900/80 border border-green-500/30 px-5 py-2 rounded-full text-xs font-bold text-green-400 uppercase tracking-[0.2em] mb-6 shadow-[0_0_15px_rgba(34,197,94,0.15)]">
+                <i class="fa-solid fa-shield-halved"></i> Acesso Restrito - Elite ESA 2026
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 mb-4 tracking-tight">
+                Gerador de Papiro <span class="text-green-500">Tático</span>
+            </h1>
+            <p class="text-slate-400 text-lg font-light max-w-2xl mx-auto">Insira os parâmetros da missão diária. O sistema formulará a estratégia de aprovação mais letal para o seu tempo disponível.</p>
+        </div>
+
+        <div class="glass-panel rounded-3xl p-6 md:p-10 relative overflow-hidden fade-in-up" style="animation-delay: 0.2s;">
+            
+            <!-- Formulário de Entrada -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                <div class="group">
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest group-hover:text-green-400 transition-colors">
+                        <i class="fa-solid fa-crosshairs"></i> Alvo Principal (Matéria)
+                    </label>
+                    <div class="relative">
+                        <select id="select-materia" class="custom-select w-full bg-slate-900/50 border-2 border-slate-700 text-white font-medium rounded-xl px-5 py-4 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all cursor-pointer">
+                            <option value="matematica">Matemática</option>
+                            <option value="portugues">Português</option>
+                            <option value="historia">História do Brasil</option>
+                            <option value="geografia">Geografia do Brasil</option>
+                            <option value="ingles">Inglês</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="group">
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest group-hover:text-green-400 transition-colors">
+                        <i class="fa-solid fa-hourglass-half"></i> Janela de Operação (Tempo)
+                    </label>
+                    <div class="relative">
+                        <select id="select-tempo" class="custom-select w-full bg-slate-900/50 border-2 border-slate-700 text-white font-medium rounded-xl px-5 py-4 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all cursor-pointer">
+                            <option value="curto">1 a 2 horas (Ataque Rápido)</option>
+                            <option value="medio" selected>3 a 4 horas (Operação Padrão)</option>
+                            <option value="longo">5+ horas (Missão Caveira)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="iniciarProcessamento()" class="btn-tactical w-full text-white font-extrabold text-lg py-5 rounded-xl flex items-center justify-center gap-3 tracking-wide">
+                <i class="fa-solid fa-satellite-dish"></i> 
+                GERAR DOSSIÊ DE ESTUDOS
+            </button>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="hidden mt-8 text-center py-10 border-t border-slate-800">
+                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-green-500 mb-4"></i>
+                <h3 class="text-lg font-bold text-white mb-2">Processando Algoritmo ESA...</h3>
+                <p id="loading-text" class="text-sm text-slate-400 font-mono">Buscando incidência na banca examinadora...</p>
+            </div>
+
+            <!-- Resultado do Plano (Dossiê) -->
+            <div id="resultado-container" class="hidden mt-10 pt-8 border-t border-slate-800 relative">
+                <div class="scanline"></div>
+                
+                <div class="flex flex-wrap items-center justify-between mb-8 gap-4">
+                    <div>
+                        <div class="text-xs font-bold text-green-500 uppercase tracking-widest mb-1">Missão Gerada</div>
+                        <h3 class="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
+                            <span id="titulo-missao" class="capitalize">---</span>
+                        </h3>
+                    </div>
+                    
+                    <!-- Badges de Inteligência -->
+                    <div class="flex gap-3">
+                        <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-center">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold">Incidência</div>
+                            <div id="badge-incidencia" class="text-sm font-black text-red-400">ALTÍSSIMA</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-center">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold">Nível</div>
+                            <div id="badge-nivel" class="text-sm font-black text-yellow-400">CAVEIRA</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6 relative z-20">
+                    
+                    <!-- Bloco 1: Teoria Mastigada -->
+                    <div class="bg-slate-900/80 rounded-2xl p-6 border-l-4 border-blue-500 shadow-lg relative group transition-all hover:bg-slate-800/80">
+                        <div class="absolute -left-[5px] top-6 w-2 h-8 bg-blue-500 rounded-r opacity-50"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="font-bold text-blue-400 text-xl flex items-center gap-2">
+                                <i class="fa-solid fa-brain"></i> Fase 1: Inteligência (Teoria)
+                            </h4>
+                            <span id="tempo-teoria" class="text-xs font-bold text-blue-300 bg-blue-900/30 border border-blue-500/20 px-3 py-1 rounded-full"></span>
+                        </div>
+                        
+                        <div class="mb-4 inline-block bg-slate-800 px-3 py-1 rounded text-sm text-white font-medium shadow-inner">
+                            <span class="text-slate-400 mr-2">Alvo:</span> <span id="txt-topico" class="uppercase tracking-wider text-green-300"></span>
+                        </div>
+                        
+                        <p id="txt-teoria" class="text-slate-300 leading-relaxed mb-6"></p>
+                        
+                        <!-- RESUMO TÁTICO -->
+                        <div class="bg-slate-950/50 border border-slate-700 rounded-xl p-6 relative shadow-inner mt-4">
+                            <div class="absolute -top-3 left-6 bg-green-600 text-white text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-[0_0_10px_rgba(22,163,74,0.4)] flex items-center gap-2">
+                                <i class="fa-solid fa-thumbtack"></i> Resumo Tático
+                            </div>
+                            <div id="txt-resumo-tatico" class="text-sm md:text-base text-slate-200 leading-relaxed mt-2 space-y-4">
+                                <!-- Conteúdo será injetado aqui -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloco 2: Prática/Questões -->
+                    <div class="bg-slate-900/80 rounded-2xl p-6 border-l-4 border-red-500 shadow-lg relative group transition-all hover:bg-slate-800/80">
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="font-bold text-red-400 text-xl flex items-center gap-2">
+                                <i class="fa-solid fa-crosshairs"></i> Fase 2: Combate (Prática)
+                            </h4>
+                            <span id="tempo-pratica" class="text-xs font-bold text-red-300 bg-red-900/30 border border-red-500/20 px-3 py-1 rounded-full"></span>
+                        </div>
+                        <p id="txt-pratica" class="text-slate-300 leading-relaxed"></p>
+                    </div>
+
+                    <!-- Bloco 3: Revisão -->
+                    <div class="bg-slate-900/80 rounded-2xl p-6 border-l-4 border-yellow-500 shadow-lg relative group transition-all hover:bg-slate-800/80">
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="font-bold text-yellow-400 text-xl flex items-center gap-2">
+                                <i class="fa-solid fa-rotate"></i> Fase 3: Extração (Revisão)
+                            </h4>
+                            <span id="tempo-revisao" class="text-xs font-bold text-yellow-300 bg-yellow-900/30 border border-yellow-500/20 px-3 py-1 rounded-full"></span>
+                        </div>
+                        <p id="txt-revisao" class="text-slate-300 leading-relaxed"></p>
+                    </div>
+                </div>
+                
+                <!-- O BIZÚ DO GENERAL (Highlight) -->
+                <div class="mt-8 relative p-1 rounded-2xl bg-gradient-to-r from-green-600 via-emerald-400 to-green-600 shadow-[0_0_30px_rgba(22,163,74,0.3)]">
+                    <div class="bg-slate-900 rounded-xl p-6 h-full w-full">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500">
+                                <i class="fa-solid fa-star text-green-400 text-xl"></i>
+                            </div>
+                            <h4 class="font-black text-white text-lg uppercase tracking-wide">O Bizú do General</h4>
+                        </div>
+                        <p id="txt-bizu" class="text-slate-300 font-medium leading-relaxed italic border-l-2 border-green-500/50 pl-4 ml-5"></p>
+                    </div>
+                </div>
+
+                <!-- Citação Motivacional -->
+                <div class="mt-8 text-center">
+                    <p id="txt-motivacao" class="text-sm text-slate-500 font-serif italic">"O suor no treinamento poupa sangue na batalha."</p>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Botão Flutuante do Chat IA -->
+    <button onclick="toggleChat()" class="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-tr from-green-700 to-green-500 rounded-full shadow-[0_0_20px_rgba(22,163,74,0.5)] flex items-center justify-center text-white text-2xl hover:scale-110 transition-all z-50 group border-2 border-green-400">
+        <i class="fa-solid fa-robot"></i>
+        <span class="absolute -top-12 right-0 bg-slate-800 text-xs text-white px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-green-500/50 shadow-lg pointer-events-none font-bold">Sargento IA (Tira Dúvidas)</span>
+    </button>
+
+    <!-- Janela do Chat IA -->
+    <div id="chat-ia" class="fixed bottom-28 right-6 w-[340px] md:w-[420px] bg-slate-900 border border-slate-700 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 flex flex-col overflow-hidden chat-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-green-800 to-slate-900 border-b border-green-600/50 p-4 flex justify-between items-center z-10 relative">
+            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-20"></div>
+            <div class="flex items-center gap-3 relative z-10">
+                <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center border-2 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                    <i class="fa-solid fa-user-shield text-green-400 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-lg leading-tight">Sargento IA</h3>
+                    <p class="text-[10px] text-green-400 uppercase tracking-widest font-bold flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
+                    </p>
+                </div>
+            </div>
+            <button onclick="toggleChat()" class="text-slate-400 hover:text-white transition-colors relative z-10"><i class="fa-solid fa-xmark text-2xl"></i></button>
+        </div>
+        
+        <!-- Mensagens -->
+        <div id="chat-messages" class="h-[60vh] max-h-[400px] overflow-y-auto p-4 space-y-4 bg-slate-950/90 scroll-smooth flex-1">
+            <div class="chat-message flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-green-800 flex-shrink-0 flex items-center justify-center text-xs border border-green-500 mt-1 shadow-inner"><i class="fa-solid fa-robot text-green-300"></i></div>
+                <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-sm text-slate-200 border border-slate-700 shadow-sm leading-relaxed">
+                    <strong>Brasil!</strong> Sou o Sargento IA.<br><br>Estou aqui para sanar suas dúvidas sobre o edital da ESA, bizús de matérias e organizar seu papiro. <br><br>Qual a sua dúvida operacional de hoje, guerreiro?
+                </div>
+            </div>
+        </div>
+
+        <!-- Input -->
+        <div class="p-3 bg-slate-900 border-t border-slate-700">
+            <form id="chat-form" onsubmit="enviarMensagemIA(event)" class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="Digite sua dúvida, guerreiro..." class="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all placeholder-slate-500 shadow-inner" required autocomplete="off">
+                <button type="submit" class="bg-gradient-to-br from-green-600 to-green-800 hover:from-green-500 hover:to-green-700 text-white w-12 rounded-xl flex items-center justify-center transition-all shadow-md">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // === BANCO DE DADOS MACIÇO (ESA 2026) ===
+        // Agora com dezenas de tópicos para garantir sorteios variados e ricos.
+        const dadosPapiro = {
+            matematica: [
+                {
+                    topico: "Funções do 2º Grau (Parábola)",
+                    incidencia: "ALTÍSSIMA", nivel: "CAVEIRA",
+                    teoria: "Aprenda a encontrar as raízes (fórmula de Bhaskara) e as coordenadas do Vértice. A ESA ama pedir questões contextualizadas envolvendo lucro máximo ou altura máxima de projéteis.",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Fórmulas de Ouro</h5>
+                        <ul class="space-y-3 mb-5">
+                            <li class="flex items-center gap-3"><span class="text-slate-400 font-medium w-24">Bhaskara:</span> <code class="bg-slate-800 text-yellow-300 px-3 py-1 rounded-md font-mono text-sm border border-slate-700">x = (-b ± &radic;&Delta;) / 2a</code></li>
+                            <li class="flex items-center gap-3"><span class="text-slate-400 font-medium w-24">Vértice (Xv):</span> <code class="bg-slate-800 text-yellow-300 px-3 py-1 rounded-md font-mono text-sm border border-slate-700">Xv = -b / 2a</code></li>
+                            <li class="flex items-center gap-3"><span class="text-slate-400 font-medium w-24">Vértice (Yv):</span> <code class="bg-slate-800 text-yellow-300 px-3 py-1 rounded-md font-mono text-sm border border-slate-700">Yv = -&Delta; / 4a</code></li>
+                        </ul>
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Análise Gráfica</h5>
+                        <ul class="space-y-2 text-sm">
+                            <li><span class="text-green-400 font-bold">a &gt; 0 (+)</span> &rarr; Concavidade para Cima <b>U</b> (Tem Mínimo)</li>
+                            <li><span class="text-red-400 font-bold">a &lt; 0 (-)</span> &rarr; Concavidade para Baixo <b>&cap;</b> (Tem Máximo)</li>
+                        </ul>
+                    `,
+                    bizu: "A banca sempre tenta te confundir entre o Xv e o Yv. Regra rápida: Se pedir o VALOR MÁXIMO alcançado (ex: lucro em R$, altura), calcule o Yv. Se pedir QUANDO ocorreu (ex: quantidade vendida, tempo), calcule o Xv!"
+                },
+                {
+                    topico: "Logaritmos (Propriedades Operatórias)",
+                    incidencia: "ALTA", nivel: "PADRÃO",
+                    teoria: "Domine a definição básica e as 3 propriedades clássicas. A prova costuma misturar logaritmo com equações exponenciais, exigindo que você iguale as bases.",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Propriedades Salva-Vidas</h5>
+                        <ul class="space-y-3">
+                            <li class="bg-slate-800/50 p-2 rounded-lg border border-slate-700/50"><strong class="text-blue-300">1. Definição:</strong> <br><code class="text-yellow-300 font-mono">log<sub>a</sub>(b) = x  &rarr;  a<sup>x</sup> = b</code></li>
+                            <li class="bg-slate-800/50 p-2 rounded-lg border border-slate-700/50"><strong class="text-blue-300">2. Regra do Tombo:</strong> <br><code class="text-yellow-300 font-mono">log<sub>a</sub>(b<sup>n</sup>) = n &middot; log<sub>a</sub>(b)</code></li>
+                            <li class="bg-slate-800/50 p-2 rounded-lg border border-slate-700/50"><strong class="text-blue-300">3. Produto:</strong> <br><code class="text-yellow-300 font-mono">log<sub>a</sub>(b &middot; c) = log<sub>a</sub>(b) + log<sub>a</sub>(c)</code></li>
+                            <li class="bg-slate-800/50 p-2 rounded-lg border border-slate-700/50"><strong class="text-blue-300">4. Divisão:</strong> <br><code class="text-yellow-300 font-mono">log<sub>a</sub>(b / c) = log<sub>a</sub>(b) - log<sub>a</sub>(c)</code></li>
+                        </ul>
+                    `,
+                    bizu: "Muitos travam quando a base não aparece. Lembre-se: se a questão escrever apenas 'log 100', a base oculta é SEMPRE 10."
+                },
+                {
+                    topico: "Progressão Aritmética (P.A.)",
+                    incidencia: "ALTA", nivel: "BÁSICO",
+                    teoria: "Fundamental na ESA. Saiba calcular o Termo Geral e a Soma dos Termos. Muitas questões pedem para descobrir a razão e achar um termo distante na sequência.",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Fórmulas Essenciais de P.A.</h5>
+                        <ul class="space-y-3 mb-5">
+                            <li class="flex items-center gap-3"><span class="text-slate-400 font-medium w-32">Termo Geral (An):</span> <code class="bg-slate-800 text-yellow-300 px-3 py-1 rounded-md font-mono text-sm border border-slate-700">an = a1 + (n - 1) &middot; r</code></li>
+                            <li class="flex items-center gap-3"><span class="text-slate-400 font-medium w-32">Soma (Sn):</span> <code class="bg-slate-800 text-yellow-300 px-3 py-1 rounded-md font-mono text-sm border border-slate-700">Sn = [(a1 + an) &middot; n] / 2</code></li>
+                        </ul>
+                        <p class="text-sm text-slate-400 italic">Onde: a1 = primeiro termo, n = posição do termo, r = razão.</p>
+                    `,
+                    bizu: "Propriedade Mágica: Em qualquer P.A., o termo do meio é sempre a média aritmética dos seus vizinhos! Exemplo na P.A. (2, x, 10), x = (2+10)/2 = 6."
+                },
+                {
+                    topico: "Geometria Espacial (Cilindros e Cones)",
+                    incidencia: "ALTÍSSIMA", nivel: "CAVEIRA",
+                    teoria: "Questões certas na prova. Você precisa dominar as fórmulas de Volume e Área Total, além de saber relacionar litros com decímetros cúbicos (dm³).",
+                    resumoTatico: `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-blue-900/20 p-3 rounded-lg border border-blue-500/30">
+                                <h5 class="text-blue-400 font-bold mb-2">Cilindro</h5>
+                                <ul class="space-y-2 text-sm font-mono text-yellow-200">
+                                    <li>Vol = &pi; &middot; R&sup2; &middot; h</li>
+                                    <li>Área Lat = 2 &middot; &pi; &middot; R &middot; h</li>
+                                </ul>
+                            </div>
+                            <div class="bg-orange-900/20 p-3 rounded-lg border border-orange-500/30">
+                                <h5 class="text-orange-400 font-bold mb-2">Cone</h5>
+                                <ul class="space-y-2 text-sm font-mono text-yellow-200">
+                                    <li>Vol = (&pi; &middot; R&sup2; &middot; h) / 3</li>
+                                    <li>Área Lat = &pi; &middot; R &middot; g</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-300 mt-4 text-center bg-slate-800 py-1 rounded">Lembrete de Ouro: <strong class="text-white">1 dm³ = 1 Litro</strong> | <strong class="text-white">1 m³ = 1000 Litros</strong></p>
+                    `,
+                    bizu: "Sempre que uma figura tiver 'ponta' (como o Cone ou Pirâmide), o volume será igual a área da base vezes a altura, DIVIDIDO POR 3. Figuras retas (Cilindro, Prisma) não dividem por 3!"
+                }
+            ],
+            portugues: [
+                {
+                    topico: "Crase (Casos Proibidos e Obrigatórios)",
+                    incidencia: "ALTÍSSIMA", nivel: "PADRÃO",
+                    teoria: "A crase é a fusão da preposição 'a' com o artigo 'a'. Foco principal: decorar onde a crase É PROIBIDA para eliminar alternativas na prova.",
+                    resumoTatico: `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-red-900/20 p-3 rounded-lg border border-red-500/30">
+                                <h5 class="text-red-400 font-bold mb-2 flex items-center gap-2"><i class="fa-solid fa-xmark"></i> Casos Proibidos</h5>
+                                <ul class="space-y-1 text-sm">
+                                    <li>&bull; Palavras <b>masculinas</b> (a pé)</li>
+                                    <li>&bull; Antes de <b>verbos</b> (a chover)</li>
+                                    <li>&bull; Palavras <b>repetidas</b> (cara a cara)</li>
+                                    <li>&bull; Antes de <b>pronomes</b> (a ela)</li>
+                                </ul>
+                            </div>
+                            <div class="bg-green-900/20 p-3 rounded-lg border border-green-500/30">
+                                <h5 class="text-green-400 font-bold mb-2 flex items-center gap-2"><i class="fa-solid fa-check"></i> Casos Obrigatórios</h5>
+                                <ul class="space-y-1 text-sm">
+                                    <li>&bull; Locuções <b>femininas</b>:</li>
+                                    <li class="text-slate-400 italic">Ex: Às vezes, à noite, à direita, à medida que.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    `,
+                    bizu: "Macete geográfico 'Vou a, Volto da'. Se vou A e volto DA, crase há! Se vou A e volto DE, crase pra quê? Ex: Vou à Bahia (Volto da). Vou a Roma (Volto de)."
+                },
+                {
+                    topico: "Concordância Verbal",
+                    incidencia: "ALTÍSSIMA", nivel: "CAVEIRA",
+                    teoria: "Regra geral: o verbo concorda com o SUJEITO. A banca da ESA gosta de afastar o sujeito do verbo para confundir sua leitura.",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Casos que Despencam na ESA</h5>
+                        <ul class="space-y-4">
+                            <li>
+                                <strong class="text-blue-300">1. Verbo HAVER (Sentido de Existir):</strong><br>
+                                <span class="text-sm text-slate-400">É impessoal! Fica sempre no SINGULAR.</span><br>
+                                <span class="text-sm bg-slate-800 px-2 py-1 rounded inline-block mt-1">Certo: <strong class="text-white">Havia</strong> muitos alunos. (Erro comum: Haviam)</span>
+                            </li>
+                            <li>
+                                <strong class="text-blue-300">2. Verbo FAZER (Tempo decorrido/Clima):</strong><br>
+                                <span class="text-sm text-slate-400">Impessoal! Fica no SINGULAR.</span><br>
+                                <span class="text-sm bg-slate-800 px-2 py-1 rounded inline-block mt-1">Certo: <strong class="text-white">Faz</strong> dez anos. (Erro comum: Fazem dez anos)</span>
+                            </li>
+                            <li>
+                                <strong class="text-blue-300">3. Sujeito Composto pós-posto:</strong><br>
+                                <span class="text-sm text-slate-400">O verbo pode concordar com o mais próximo ou ir para o plural.</span>
+                            </li>
+                        </ul>
+                    `,
+                    bizu: "Quando o verbo HAVER for auxiliar (acompanhando outro verbo), ele tem plural sim! Ex: 'Eles HAVIAM estudado para a prova'. Só é impessoal no sentido de existir/tempo."
+                },
+                {
+                    topico: "Funções da Linguagem",
+                    incidencia: "ALTA", nivel: "BÁSICO",
+                    teoria: "Matéria de interpretação garantida. Relacione cada função a um elemento da comunicação (emissor, receptor, código, canal, mensagem).",
+                    resumoTatico: `
+                        <ul class="space-y-2 text-sm">
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-blue-300">1. Emotiva (Expressiva):</strong> Foco no EMISSOR (Sentimentos, 1ª pessoa).</li>
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-green-300">2. Apelativa (Conativa):</strong> Foco no RECEPTOR (Propagandas, verbos no imperativo).</li>
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-yellow-300">3. Referencial (Informativa):</strong> Foco na MENSAGEM/CONTEXTO (Notícias, dados objetivos).</li>
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-pink-300">4. Metalinguística:</strong> Foco no CÓDIGO (Dicionário, poema falando de poema).</li>
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-purple-300">5. Fática:</strong> Foco no CANAL (Testar conexão: "Alô?", "Entendeu?").</li>
+                        </ul>
+                    `,
+                    bizu: "Decore: Conativa = Propaganda (Imperativo: Compre, Faça). Referencial = Jornal Nacional (Notícia direta, 3ª pessoa)."
+                }
+            ],
+            historia: [
+                {
+                    topico: "Era Vargas (1930 - 1945)",
+                    incidencia: "ALTÍSSIMA", nivel: "PADRÃO",
+                    teoria: "Estude as 3 fases do governo de Getúlio Vargas. A banca cobra fortemente o Estado Novo e as medidas trabalhistas.",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Linha do Tempo Vargas</h5>
+                        <div class="space-y-3">
+                            <div class="border-l-2 border-blue-500 pl-3">
+                                <strong class="text-white">1. Provisório (1930 - 1934)</strong><br>
+                                <span class="text-sm text-slate-400">&bull; Revolução Constitucionalista de 1932 (SP vs Vargas).</span>
+                            </div>
+                            <div class="border-l-2 border-yellow-500 pl-3">
+                                <strong class="text-white">2. Constitucional (1934 - 1937)</strong><br>
+                                <span class="text-sm text-slate-400">&bull; Voto feminino (Constituição de 34).</span><br>
+                                <span class="text-sm text-slate-400">&bull; Polarização: AIB (Fascistas) vs ANL (Comunistas).</span>
+                            </div>
+                            <div class="border-l-2 border-red-500 pl-3">
+                                <strong class="text-white">3. Estado Novo (1937 - 1945)</strong><br>
+                                <span class="text-sm text-slate-400">&bull; Ditadura iniciada pelo falso 'Plano Cohen'.</span><br>
+                                <span class="text-sm text-slate-400">&bull; CLT (1943) e criação de estatais (CSN, Vale).</span>
+                            </div>
+                        </div>
+                    `,
+                    bizu: "Cuidado com o 'Nacionalismo Econômico'. Vargas, principalmente no Estado Novo, focou na INDÚSTRIA DE BASE (siderurgia, energia, mineração) controlada pelo Estado, e não em bens de consumo (roupas, eletrodomésticos)."
+                },
+                {
+                    topico: "Período Regencial e Revoltas",
+                    incidencia: "ALTA", nivel: "CAVEIRA",
+                    teoria: "Período de instabilidade enquanto D. Pedro II era menor de idade. O foco absoluto são as Revoltas Provinciais (Cabanagem, Farroupilha, Sabinada, Balaiada).",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Tabela de Revoltas Regenciais</h5>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-slate-400 uppercase bg-slate-800">
+                                    <tr><th class="px-2 py-2">Revolta</th><th class="px-2 py-2">Local</th><th class="px-2 py-2">Motivo Principal</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-slate-700"><td class="px-2 py-2 font-bold text-yellow-300">Farroupilha</td><td class="px-2 py-2 text-white">RS/SC</td><td class="px-2 py-2 text-slate-300">Impostos sobre o charque. (Elite)</td></tr>
+                                    <tr class="border-b border-slate-700"><td class="px-2 py-2 font-bold text-blue-300">Cabanagem</td><td class="px-2 py-2 text-white">Grão-Pará</td><td class="px-2 py-2 text-slate-300">Miséria extrema. (População)</td></tr>
+                                    <tr class="border-b border-slate-700"><td class="px-2 py-2 font-bold text-green-300">Sabinada</td><td class="px-2 py-2 text-white">Bahia</td><td class="px-2 py-2 text-slate-300">Separatista temporária. (Classe Média)</td></tr>
+                                    <tr><td class="px-2 py-2 font-bold text-red-300">Malês</td><td class="px-2 py-2 text-white">Bahia</td><td class="px-2 py-2 text-slate-300">Escravos islamizados pela liberdade.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `,
+                    bizu: "A Guerra dos Farrapos (Farroupilha) foi a ÚNICA revolta de caráter puramente de elite (estancieiros) e a mais longa. A Cabanagem foi a única onde o povão (negros, índios, mestiços) realmente tomou o poder por um tempo."
+                }
+            ],
+            geografia: [
+                {
+                    topico: "Climas do Brasil",
+                    incidencia: "ALTA", nivel: "BÁSICO",
+                    teoria: "Identifique as características cruciais de pluviosidade (quantidade de chuva) e amplitude térmica dos climas brasileiros.",
+                    resumoTatico: `
+                        <ul class="space-y-3 text-sm">
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-green-400">🌴 Equatorial:</strong> Quente e úmido o ano todo. Maior índice de chuvas. <i>(Região Norte)</i></li>
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-yellow-400">☀️ Tropical Típico:</strong> Duas estações bem definidas. Verão chuvoso, Inverno seco. <i>(Centro-Oeste)</i></li>
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-orange-400">🌵 Semiárido:</strong> Quente, chuvas escassas e mal distribuídas. <i>(Sertão Nordestino)</i></li>
+                            <li class="bg-slate-800/40 p-2 rounded"><strong class="text-blue-400">❄️ Subtropical:</strong> Abaixo do Trópico de Capricórnio. Chuvas regulares, invernos rigorosos. <i>(Sul)</i></li>
+                        </ul>
+                    `,
+                    bizu: "Armadilha clássica: confundir 'Tropical Litorâneo' com 'Tropical de Altitude'. Litorâneo chove mais no INVERNO (devido às massas de ar). Altitude sofre efeito do relevo, tendo invernos mais rigorosos (Serras do Sudeste)."
+                },
+                {
+                    topico: "Domínios Morfoclimáticos (Aziz Ab'Sáber)",
+                    incidencia: "ALTÍSSIMA", nivel: "PADRÃO",
+                    teoria: "Não confunda Bioma com Domínio. Domínio engloba relevo, clima, vegetação e hidrografia como um sistema único.",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Os 6 Grandes Domínios</h5>
+                        <ul class="space-y-2 text-sm text-slate-300">
+                            <li><strong class="text-white">1. Amazônico:</strong> Terras baixas, floresta equatorial, rios volumosos.</li>
+                            <li><strong class="text-white">2. Cerrado:</strong> Chapadões (relevo), clima tropical, vegetação tortuosa (raízes profundas).</li>
+                            <li><strong class="text-white">3. Mares de Morros:</strong> Relevo mamelonar (meia-laranja), Mata Atlântica. (Sudeste).</li>
+                            <li><strong class="text-white">4. Caatinga:</strong> Depressões interplanálticas, clima semiárido, rios intermitentes.</li>
+                            <li><strong class="text-white">5. Araucárias:</strong> Planaltos subtropicais, matas de pinhais. (Região Sul).</li>
+                            <li><strong class="text-white">6. Pradarias (Pampas):</strong> Relevo de coxilhas (colinas suaves), herbáceas. (Extremo Sul).</li>
+                        </ul>
+                    `,
+                    bizu: "A ESA ama cobrar a 'Zona de Transição'. O Pantanal, Agreste e Mata dos Cocais NÃO SÃO domínios, são FAIXAS DE TRANSIÇÃO entre domínios!"
+                }
+            ],
+            ingles: [
+                {
+                    topico: "Pronomes (Subject vs Object)",
+                    incidencia: "ALTA", nivel: "BÁSICO",
+                    teoria: "Diferencie quem FAZ a ação (Subject Pronoun) de quem RECEBE a ação (Object Pronoun).",
+                    resumoTatico: `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-slate-400 uppercase bg-slate-800">
+                                    <tr><th class="px-3 py-2">Subject (Antes do Verbo)</th><th class="px-3 py-2">Object (Depois do Verbo)</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-slate-700"><td class="px-3 py-2 font-bold text-white">I</td><td class="px-3 py-2 text-blue-300">Me</td></tr>
+                                    <tr class="border-b border-slate-700"><td class="px-3 py-2 font-bold text-white">He</td><td class="px-3 py-2 text-blue-300">Him</td></tr>
+                                    <tr class="border-b border-slate-700"><td class="px-3 py-2 font-bold text-white">She</td><td class="px-3 py-2 text-blue-300">Her</td></tr>
+                                    <tr class="border-b border-slate-700"><td class="px-3 py-2 font-bold text-white">We</td><td class="px-3 py-2 text-blue-300">Us</td></tr>
+                                    <tr><td class="px-3 py-2 font-bold text-white">They</td><td class="px-3 py-2 text-blue-300">Them</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `,
+                    bizu: "Em inglês, DEPOIS de preposições (with, for, about, at, to) SEMPRE usamos o Object Pronoun. Exemplo certo: 'Look AT HIM'. Alternativa de pegadinha da prova: 'Look at he'."
+                },
+                {
+                    topico: "Falsos Cognatos (False Friends)",
+                    incidencia: "ALTA", nivel: "CAVEIRA",
+                    teoria: "Palavras que se parecem com o português, mas significam coisas completamente diferentes. A banca usa isso nos textos para testar sua tradução literal.",
+                    resumoTatico: `
+                        <h5 class="text-green-400 font-bold border-b border-slate-700 pb-1 mb-3 uppercase text-sm tracking-wider">Top Falsos Cognatos ESA</h5>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div class="bg-slate-800 p-2 rounded border-l-2 border-red-500">
+                                <span class="text-red-300 font-bold line-through">Atual</span> &rarr; <strong class="text-green-300">Actual</strong> (Na verdade / Real)
+                            </div>
+                            <div class="bg-slate-800 p-2 rounded border-l-2 border-red-500">
+                                <span class="text-red-300 font-bold line-through">Pretender</span> &rarr; <strong class="text-green-300">Pretend</strong> (Fingir)
+                            </div>
+                            <div class="bg-slate-800 p-2 rounded border-l-2 border-red-500">
+                                <span class="text-red-300 font-bold line-through">Realizar</span> &rarr; <strong class="text-green-300">Realize</strong> (Perceber)
+                            </div>
+                            <div class="bg-slate-800 p-2 rounded border-l-2 border-red-500">
+                                <span class="text-red-300 font-bold line-through">Parente</span> &rarr; <strong class="text-green-300">Parent</strong> (Pais - mãe/pai)
+                            </div>
+                            <div class="bg-slate-800 p-2 rounded border-l-2 border-red-500">
+                                <span class="text-red-300 font-bold line-through">Atender</span> &rarr; <strong class="text-green-300">Attend</strong> (Frequentar / Assistir aula)
+                            </div>
+                        </div>
+                    `,
+                    bizu: "Se a palavra parecer ÓBVIA demais no texto de interpretação de inglês da ESA, desconfie! Geralmente a resposta mais literal é a armadilha do falso cognato."
+                }
+            ]
+        };
+
+        const distTempos = {
+            curto: { teoria: "30 min", pratica: "45 min", revisao: "15 min", q_min: "15", q_max: "20" },
+            medio: { teoria: "1h", pratica: "2h", revisao: "30 min", q_min: "30", q_max: "50" },
+            longo: { teoria: "1h 30m", pratica: "3h", revisao: "45 min", q_min: "60", q_max: "100" }
+        };
+
+        const frasesMotivacionais = [
+            "\"O suor no treinamento poupa sangue na batalha.\"",
+            "\"A disciplina é a ponte entre metas e realizações.\"",
+            "\"Você não é derrotado quando perde. Você é derrotado quando desiste.\"",
+            "\"A dor é temporária, mas a farda verde-oliva é para sempre.\"",
+            "\"Enquanto eles dormem, você papiro. Enquanto eles festejam, você foca.\"",
+            "\"A sorte favorece a mente bem preparada. Vá estudar.\""
+        ];
+
+        // Variável global para armazenar o contexto atual da missão (para a IA)
+        let missaoAtualContexto = null;
+
+        function getRandom(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function iniciarProcessamento() {
+            document.getElementById('resultado-container').classList.add('hidden');
+            const loader = document.getElementById('loading-state');
+            loader.classList.remove('hidden');
+            
+            const loadingText = document.getElementById('loading-text');
+            const passos = [
+                "Cruzando dados com editais anteriores da ESA...",
+                "Otimizando grade de horários...",
+                "Formatando Dossiê de Inteligência..."
+            ];
+            
+            let i = 0;
+            const intervaloId = setInterval(() => {
+                if (i < passos.length) {
+                    loadingText.innerText = passos[i];
+                    i++;
+                }
+            }, 500);
+
+            setTimeout(() => {
+                clearInterval(intervaloId);
+                loader.classList.add('hidden');
+                gerarPlano();
+            }, 1800);
+        }
+
+        function gerarPlano() {
+            const materiaId = document.getElementById('select-materia').value;
+            const tempoId = document.getElementById('select-tempo').value;
+            const nomeMateria = document.getElementById('select-materia').options[document.getElementById('select-materia').selectedIndex].text;
+
+            const conteudosDaMateria = dadosPapiro[materiaId];
+            const dadosSorteados = getRandom(conteudosDaMateria); 
+            const tempos = distTempos[tempoId];
+
+            // Atualiza o contexto global para o Sargento IA
+            missaoAtualContexto = {
+                materia: nomeMateria,
+                topico: dadosSorteados.topico,
+                nivel: dadosSorteados.nivel
+            };
+
+            const corIncidencia = dadosSorteados.incidencia === 'ALTÍSSIMA' ? 'text-red-400' : 'text-orange-400';
+            const corNivel = dadosSorteados.nivel === 'CAVEIRA' ? 'text-red-500' : (dadosSorteados.nivel === 'BÁSICO' ? 'text-green-400' : 'text-yellow-400');
+
+            document.getElementById('titulo-missao').innerText = nomeMateria;
+            document.getElementById('badge-incidencia').innerText = dadosSorteados.incidencia;
+            document.getElementById('badge-incidencia').className = `text-sm font-black ${corIncidencia}`;
+            document.getElementById('badge-nivel').innerText = dadosSorteados.nivel;
+            document.getElementById('badge-nivel').className = `text-sm font-black ${corNivel}`;
+            
+            document.getElementById('txt-topico').innerText = dadosSorteados.topico;
+            document.getElementById('txt-bizu').innerText = dadosSorteados.bizu;
+            document.getElementById('txt-motivacao').innerText = getRandom(frasesMotivacionais);
+            
+            document.getElementById('tempo-teoria').innerText = tempos.teoria;
+            document.getElementById('txt-teoria').innerText = dadosSorteados.teoria;
+            
+            const resumoEl = document.getElementById('txt-resumo-tatico');
+            resumoEl.innerHTML = dadosSorteados.resumoTatico;
+            
+            document.getElementById('tempo-pratica').innerText = tempos.pratica;
+            document.getElementById('txt-pratica').innerHTML = `Acesse o banco de questões e filtre por: <strong>"${dadosSorteados.topico}"</strong>. <br><br>Sua meta operacional hoje é resolver <strong>entre ${tempos.q_min} a ${tempos.q_max} questões</strong>. <br><br><span class="text-red-300"><i class="fa-solid fa-triangle-exclamation"></i> Regra de Engajamento:</span> Faça blocos de 10 questões simulando ambiente real de prova, sem consultar material de apoio ou celular.`;
+
+            document.getElementById('tempo-revisao').innerText = tempos.revisao;
+            document.getElementById('txt-revisao').innerHTML = `A fase de extração garante que o terreno foi conquistado. <br><br>1. Copie o <strong>Quadro de Resumo Tático</strong> (acima) para seu caderno físico.<br>2. Para cada questão errada no combate, anote o 'porquê' do erro em um caderno de erros.`;
+
+            const container = document.getElementById('resultado-container');
+            container.classList.remove('hidden');
+            container.classList.add('fade-in-up');
+
+            setTimeout(() => {
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        // === SISTEMA DO SARGENTO IA (GEMINI API) ===
+        
+        const apiKey = ""; // Chave provida no ambiente de execução
+        
+        function toggleChat() {
+            const chat = document.getElementById('chat-ia');
+            const input = document.getElementById('chat-input');
+            if (chat.classList.contains('chat-hidden')) {
+                chat.classList.remove('chat-hidden');
+                chat.classList.add('chat-visible');
+                setTimeout(() => input.focus(), 300); // Aguarda animação para focar
+            } else {
+                chat.classList.remove('chat-visible');
+                chat.classList.add('chat-hidden');
+                input.blur();
+            }
+        }
+
+        async function fetchGeminiAPI(textoUsuario, tentativas = 5, delay = 1000) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            // Injeta o contexto da missão atual se existir
+            let contextoAtual = "";
+            if (missaoAtualContexto) {
+                contextoAtual = `\nContexto Atual: O aluno acabou de gerar uma missão de ${missaoAtualContexto.materia} focada no tópico "${missaoAtualContexto.topico}" (Nível de dificuldade: ${missaoAtualContexto.nivel}). Se ele pedir uma dica, exemplo ou bizú adicional sem especificar a matéria, baseie-se neste tópico.`;
+            }
+
+            const systemPrompt = `Você é o "Sargento IA", um instrutor tático durão, incisivo, mas que quer a aprovação do seu aluno no concurso da ESA (Escola de Sargentos das Armas - Exército Brasileiro).
+            Seu objetivo: tirar dúvidas teóricas, dar bizús (dicas de memorização) e motivar com base na disciplina militar.
+            Obrigações:
+            1. Trate o usuário como "guerreiro", "candidato" ou "bisonho" (se ele fizer pergunta preguiçosa).
+            2. Responda de forma direta e estruturada. Use no máximo 3 ou 4 parágrafos curtos.
+            3. Use marcações Markdown SIMPLES: apenas **negrito** para destacar palavras-chave e listas com hífens (-). NUNCA use tabelas ou blocos de código markdown.
+            4. Não alucine informações médicas ou de testes físicos irreais, foque na prova intelectual. ${contextoAtual}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: textoUsuario }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            for (let i = 0; i < tentativas; i++) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro de decodificação no sistema.";
+                } catch (error) {
+                    if (i === tentativas - 1) return "Negativo, guerreiro. Queda na comunicação rádio com o QG Central. Verifique sua conexão à internet e tente novamente.";
+                    await new Promise(res => setTimeout(res, delay * Math.pow(2, i))); // Exponential backoff
+                }
+            }
+        }
+
+        async function enviarMensagemIA(event) {
+            event.preventDefault();
+            const input = document.getElementById('chat-input');
+            const mensagem = input.value.trim();
+            if (!mensagem) return;
+
+            adicionarMensagemUI('usuario', mensagem);
+            input.value = '';
+            input.disabled = true;
+
+            const idLoader = adicionarLoaderUI();
+
+            const resposta = await fetchGeminiAPI(mensagem);
+
+            removerLoaderUI(idLoader);
+            adicionarMensagemUI('ia', resposta);
+            input.disabled = false;
+            input.focus();
+        }
+
+        function formatarTextoIA(texto) {
+            // Aprimorado para converter marcações do Gemini em HTML limpo
+            let formatado = texto.replace(/\*\*(.*?)\*\*/g, '<strong class="text-green-400">$1</strong>'); // Bold destacado
+            formatado = formatado.replace(/\*(.*?)\*/g, '<em>$1</em>'); // Italic
+            
+            // Corrige quebras de linha e formata listas com hifens/asteriscos no início da linha
+            formatado = formatado.split('\n').map(linha => {
+                if(linha.trim().startsWith('-') || linha.trim().startsWith('* ')) {
+                    return `<div class="ml-2 pl-2 border-l border-green-500 mb-1 flex items-start gap-2"><i class="fa-solid fa-play text-[8px] mt-1.5 text-slate-500"></i><span>${linha.substring(1).trim()}</span></div>`;
+                }
+                return `<p class="mb-2">${linha}</p>`;
+            }).join('');
+            
+            return formatado;
+        }
+
+        function adicionarMensagemUI(remetente, texto) {
+            const chatMessages = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `chat-message flex gap-3 ${remetente === 'usuario' ? 'flex-row-reverse' : ''}`;
+            
+            let avatar, bgClass, textColor, radiusClass;
+            if (remetente === 'usuario') {
+                avatar = `<div class="w-8 h-8 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center text-xs mt-1 shadow-inner border border-slate-600"><i class="fa-solid fa-user"></i></div>`;
+                bgClass = 'bg-slate-700/80 border-slate-600';
+                textColor = 'text-white';
+                radiusClass = 'rounded-2xl rounded-tr-none';
+            } else {
+                avatar = `<div class="w-8 h-8 rounded-full bg-green-800 flex-shrink-0 flex items-center justify-center text-xs border border-green-500 mt-1 shadow-inner"><i class="fa-solid fa-robot text-green-300"></i></div>`;
+                bgClass = 'bg-slate-800/90 border-slate-700';
+                textColor = 'text-slate-200';
+                radiusClass = 'rounded-2xl rounded-tl-none';
+            }
+
+            const textoLimpo = remetente === 'ia' ? formatarTextoIA(texto) : texto;
+
+            div.innerHTML = `
+                ${avatar}
+                <div class="${bgClass} ${radiusClass} p-3 text-sm ${textColor} border shadow-sm leading-relaxed max-w-[85%]">
+                    ${textoLimpo}
+                </div>
+            `;
+            
+            chatMessages.appendChild(div);
+            // Rolagem suave para a última mensagem
+            chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+        }
+
+        function adicionarLoaderUI() {
+            const id = 'loader-' + Date.now();
+            const chatMessages = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = `chat-message flex gap-3`;
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-green-800 flex-shrink-0 flex items-center justify-center text-xs border border-green-500 mt-1 shadow-inner"><i class="fa-solid fa-robot text-green-300"></i></div>
+                <div class="bg-slate-800 rounded-2xl rounded-tl-none p-3 text-sm text-slate-400 border border-slate-700 flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-circle-notch fa-spin text-green-500"></i> Processando inteligência...
+                </div>
+            `;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+            return id;
+        }
+
+        function removerLoaderUI(id) {
+            const loader = document.getElementById(id);
+            if (loader) loader.remove();
+        }
+    </script>
+</body>
+</html>
