@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QG do Aluno - Gerador de Papiro ESA 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #020617;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            background-attachment: fixed;
+            position: relative;
+        }
+
+        /* Fundo Grid Tático */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(34, 197, 94, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(34, 197, 94, 0.03) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+        }
+
+        body::before {
+            content: ''; position: fixed; inset: 0; z-index: -2;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(22, 101, 52, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(30, 58, 138, 0.15), transparent 25%);
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-tactical {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .btn-tactical::after {
+            content: ''; position: absolute;
+            top: -50%; right: -50%; bottom: -50%; left: -50%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+            transform: rotateZ(60deg) translate(-5em, 7.5em);
+            opacity: 0; transition: all 1s ease;
+        }
+        .btn-tactical:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(22, 163, 74, 0.4);
+        }
+        .btn-tactical:hover::after {
+            opacity: 1; transform: rotateZ(60deg) translate(1em, -11em);
+        }
+
+        .scanline {
+            width: 100%; height: 100px; z-index: 10; position: absolute; pointer-events: none;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(34,197,94,0.1) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1; animation: scanline 6s linear infinite;
+        }
+        @keyframes scanline { 0% { top: -100px; } 100% { top: 100%; } }
+
+        .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        #chat-ia { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; }
+        .chat-hidden { opacity: 0; transform: scale(0.8) translateY(20px); pointer-events: none; }
+        .chat-visible { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; }
+        
+        #chat-messages::-webkit-scrollbar { width: 6px; }
+        #chat-messages::-webkit-scrollbar-track { background: #020617; border-radius: 10px; }
+        #chat-messages::-webkit-scrollbar-thumb { background: rgba(22, 163, 74, 0.4); border-radius: 10px; }
+        
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.2em;
+        }
+
+        .modal-bg { background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(5px); }
+
+        .questao-card { transition: all 0.2s; cursor: pointer; }
+        .questao-card:hover { border-color: #3b82f6; background-color: rgba(30, 58, 138, 0.2); }
+        .questao-correta { border-color: #22c55e !important; background-color: rgba(22, 101, 52, 0.3) !important; color: white !important; }
+        .questao-errada { border-color: #ef4444 !important; background-color: rgba(153, 27, 27, 0.3) !important; color: #fca5a5 !important; }
+        
+        /* OTIMIZAÇÃO PARA EXPORTAÇÃO PDF / IMPRESSÃO */
+        @media print {
+            body { background: white !important; background-image: none !important; color: black !important; display: block; }
+            .bg-grid { display: none !important; }
+            .no-print, button, #chat-ia, .modal-bg, .btn-tactical, #lock-screen { display: none !important; }
+            .glass-panel, .bg-slate-900\/80, .bg-slate-950\/50, .bg-slate-800, .bg-slate-900 { 
+                background: white !important; border: 1px solid #cbd5e1 !important; box-shadow: none !important; color: black !important; page-break-inside: avoid;
+            }
+            * { color: black !important; text-shadow: none !important; }
+            h1, h2, h3, h4, span, div, p { color: black !important; }
+            .text-slate-300, .text-slate-400, .text-white { color: #333 !important; }
+            .text-green-300, .text-green-400, .text-green-500, .text-blue-400, .text-red-400 { color: #1f2937 !important; font-weight: bold; }
+            .border-l-4 { border-left-color: #475569 !important; }
+            #resultado-container { display: block !important; width: 100%; margin: 0; padding: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden">
+
+    <div class="bg-grid"></div>
+
+    <!-- Top Bar -->
+    <div class="absolute top-4 left-4 right-4 flex justify-between items-center z-20 no-print flex-wrap gap-2">
+        <div class="flex gap-2">
+            <button onclick="window.toggleModal()" class="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg">
+                <i class="fa-solid fa-id-card text-green-500"></i> <span class="hidden md:inline">Ficha Militar</span>
+            </button>
+            <button id="auth-btn" onclick="window.openAuthModal()" class="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg">
+                <i class="fa-solid fa-right-to-bracket text-blue-400"></i> <span class="hidden md:inline">Entrar / Alistar</span>
+            </button>
+            <button id="radio-btn" onclick="window.toggleRadio()" class="bg-slate-900 border border-slate-700 text-slate-400 hover:text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg">
+                <i id="radio-icon" class="fa-solid fa-volume-xmark text-blue-400"></i> <span class="hidden md:inline">Rádio Foco</span>
+            </button>
+        </div>
+        <div class="flex items-center gap-3" id="right-controls">
+            <div id="cloud-status" class="bg-slate-900 border border-slate-700 text-slate-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                <i class="fa-solid fa-cloud"></i> <span class="hidden md:inline">Conectando...</span>
+            </div>
+            <!-- Badge Ofensiva (Streak) -->
+            <div class="bg-orange-900/40 border border-orange-500/50 text-orange-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg cursor-help" title="Dias seguidos de papiro">
+                <i class="fa-solid fa-fire animate-pulse"></i> <span id="streak-display">0 Dias</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ficha Militar -->
+    <div id="modal-ficha" class="fixed inset-0 modal-bg z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300 no-print">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 relative transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto scrollbar-hide" id="modal-content">
+            <button onclick="window.toggleModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-gradient-to-tr from-green-800 to-green-500 rounded-full mx-auto mb-3 flex items-center justify-center border-4 border-slate-900 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
+                    <i class="fa-solid fa-star text-white text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white" id="rank-title">Recruta</h2>
+                <p class="text-sm text-green-400 font-bold uppercase tracking-widest mb-3">Nível Atual</p>
+                <button onclick="window.shareWhatsAppRank()" class="text-xs bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-full inline-flex items-center gap-2 transition-colors font-bold shadow-md">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> Partilhar Patente
+                </button>
+            </div>
+
+            <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700 mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-slate-400">Progresso para Promoção</span>
+                    <span class="text-white font-bold" id="xp-text">0 / 5 Tópicos</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2.5 shadow-inner">
+                    <div id="xp-bar" class="bg-green-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                <div class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-inner">
+                    <div class="text-xl font-black text-white" id="stat-missoes">0</div>
+                    <div class="text-[9px] text-slate-400 uppercase font-bold">Missões</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-inner">
+                    <div class="text-xl font-black text-blue-400" id="stat-accuracy">0%</div>
+                    <div class="text-[9px] text-slate-400 uppercase font-bold">Precisão</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-700 p-2 rounded-xl shadow-inner">
+                    <div class="text-xl font-black text-yellow-400" id="stat-caveira">0</div>
+                    <div class="text-[9px] text-slate-400 uppercase font-bold">Caveiras</div>
+                </div>
+            </div>
+
+            <!-- Gráfico de Radar Chart.js -->
+            <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700">
+                <h3 class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3 text-center">Radar Tático (Domínio)</h3>
+                <div class="relative h-48 w-full">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Alerta Customizado -->
+    <div id="modal-alert" class="fixed inset-0 modal-bg z-[60] flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-sm rounded-2xl p-6 relative transform scale-95 transition-transform duration-300 flex flex-col items-center text-center">
+            <div class="w-16 h-16 bg-red-900/50 rounded-full mb-4 flex items-center justify-center border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+                <i class="fa-solid fa-triangle-exclamation text-red-500 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Atenção, Guerreiro!</h3>
+            <p id="alert-message" class="text-sm text-slate-300 mb-6"></p>
+            <button onclick="window.fecharAlert()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors w-full">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Autenticação (Login/Registro via Firestore) -->
+    <div id="modal-auth" class="fixed inset-0 modal-bg z-[70] flex items-center justify-center hidden opacity-0 transition-opacity duration-300 no-print">
+        <div class="glass-panel w-full max-w-sm rounded-2xl p-6 relative transform scale-95 transition-transform duration-300 flex flex-col">
+            <button onclick="window.closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-900/50 rounded-full mx-auto mb-3 flex items-center justify-center border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]">
+                    <i class="fa-solid fa-user-shield text-blue-400 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-1" id="auth-title">Acesso ao QG</h3>
+                <p class="text-xs text-slate-400" id="auth-subtitle">Entre com as suas credenciais</p>
+            </div>
+            
+            <form id="auth-form" onsubmit="window.submitAuth(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">E-mail</label>
+                    <input type="email" id="auth-email" required class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Senha</label>
+                    <input type="password" id="auth-pass" required minlength="6" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                
+                <p id="auth-error" class="text-red-400 text-xs hidden text-center"></p>
+
+                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors mt-2">
+                    ENTRAR
+                </button>
+            </form>
+            
+            <div class="mt-4 text-center">
+                <button onclick="window.toggleAuthMode()" type="button" class="text-xs text-slate-400 hover:text-white transition-colors" id="auth-toggle-btn">
+                    Novo recruta? <u>Aliste-se aqui</u>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Admin Prompt -->
+    <div id="modal-admin-prompt" class="fixed inset-0 modal-bg z-[80] flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-sm rounded-2xl p-6 relative transform scale-95 transition-transform duration-300 flex flex-col items-center text-center">
+            <button onclick="window.closeAdminPrompt()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <i class="fa-solid fa-user-secret text-blue-500 text-3xl mb-4"></i>
+            <h3 class="text-xl font-bold text-white mb-2">SISTEMA RESTRITO</h3>
+            <p class="text-sm text-slate-300 mb-4">Insira a Senha do Criador:</p>
+            <input type="password" id="admin-pass-input" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white text-center mb-4 focus:outline-none focus:border-blue-500" placeholder="Senha secreta" onkeypress="if(event.key==='Enter') window.submitAdminPrompt()">
+            <button onclick="window.submitAdminPrompt()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition-colors w-full">Confirmar</button>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="max-w-4xl w-full z-10 mt-16 md:mt-4">
+        
+        <div class="text-center mb-10 fade-in-up" style="animation-delay: 0.1s;">
+            <div onclick="window.triggerAdmin()" class="inline-flex items-center gap-2 bg-slate-900/80 border border-green-500/30 px-5 py-2 rounded-full text-xs font-bold text-green-400 uppercase tracking-[0.2em] mb-6 shadow-[0_0_15px_rgba(34,197,94,0.15)] cursor-pointer select-none transition-all hover:bg-slate-800">
+                <i class="fa-solid fa-satellite"></i> Conexão Global - Rede de Inteligência IA
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 mb-4 tracking-tight">
+                Gerador de Papiro <span class="text-green-500">Tático</span>
+            </h1>
+            <p class="text-slate-400 text-lg font-light max-w-2xl mx-auto">Gere missões inéditas, realize simulados com 5 alternativas reais e evolua a sua patente rumo à aprovação.</p>
+        </div>
+
+        <div class="glass-panel rounded-3xl p-6 md:p-10 relative overflow-hidden fade-in-up" style="animation-delay: 0.2s;">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                <div class="group">
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest group-hover:text-green-400 transition-colors">
+                        <i class="fa-solid fa-crosshairs"></i> Alvo Principal (Matéria)
+                    </label>
+                    <select id="select-materia" class="custom-select w-full bg-slate-900/50 border-2 border-slate-700 text-white font-medium rounded-xl px-5 py-4 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all cursor-pointer shadow-inner">
+                        <option value="matematica">Matemática</option>
+                        <option value="portugues">Português</option>
+                        <option value="literatura">Literatura</option>
+                        <option value="redacao">Redação</option>
+                        <option value="historia">História do Brasil</option>
+                        <option value="geografia">Geografia do Brasil</option>
+                        <option value="ingles">Inglês</option>
+                    </select>
+                </div>
+                
+                <div class="group">
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest group-hover:text-green-400 transition-colors">
+                        <i class="fa-solid fa-hourglass-half"></i> Janela de Operação (Tempo)
+                    </label>
+                    <select id="select-tempo" class="custom-select w-full bg-slate-900/50 border-2 border-slate-700 text-white font-medium rounded-xl px-5 py-4 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all cursor-pointer shadow-inner">
+                        <option value="curto" data-min="30">Ataque Rápido (30 min foco)</option>
+                        <option value="medio" selected data-min="60">Operação Padrão (60 min foco)</option>
+                        <option value="longo" data-min="120">Missão Caveira (120 min foco)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="window.iniciarProcessamento()" id="btn-gerar" class="btn-tactical w-full text-white font-extrabold text-lg py-5 rounded-xl flex items-center justify-center gap-3 tracking-wide">
+                <i class="fa-solid fa-satellite-dish"></i> 
+                INTERCEPTAR CONTEÚDO E GERAR DOSSIÊ
+            </button>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="hidden mt-8 text-center py-10 border-t border-slate-800">
+                <i class="fa-solid fa-globe fa-spin text-4xl text-green-500 mb-4 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]"></i>
+                <h3 class="text-lg font-bold text-white mb-2">Acessando Rede Global de Inteligência...</h3>
+                <p id="loading-text" class="text-sm text-slate-400 font-mono">Processando matriz de dados e gerando simulado inédito...</p>
+            </div>
+
+            <!-- Resultado do Plano -->
+            <div id="resultado-container" class="hidden mt-10 pt-8 border-t border-slate-800 relative">
+                <div class="scanline"></div>
+                
+                <div class="flex flex-wrap items-center justify-between mb-8 gap-4">
+                    <div>
+                        <div class="text-xs font-bold text-green-500 uppercase tracking-widest mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Missão Interceptada
+                        </div>
+                        <h3 class="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
+                            <span id="titulo-missao" class="capitalize">---</span>
+                        </h3>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <div id="badge-levelup" class="hidden bg-purple-900/80 border border-purple-500 px-3 py-1.5 rounded-lg text-center shadow-[0_0_15px_rgba(168,85,247,0.4)] animate-pulse">
+                            <div class="text-[10px] text-purple-300 uppercase font-bold"><i class="fa-solid fa-arrow-up"></i> Promoção</div>
+                            <div class="text-sm font-black text-white">SUBIU NÍVEL</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-center shadow-inner">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold">Incidência</div>
+                            <div id="badge-incidencia" class="text-sm font-black text-red-400">ALTÍSSIMA</div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-center shadow-inner">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold">Nível</div>
+                            <div id="badge-nivel" class="text-sm font-black text-yellow-400">CAVEIRA</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CRONÓMETRO TÁTICO -->
+                <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl p-5 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center border border-slate-600 shadow-inner">
+                            <i class="fa-solid fa-stopwatch text-2xl text-slate-300" id="timer-icon"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Cronómetro de Foco</div>
+                            <div class="text-3xl font-mono font-black text-white" id="timer-display">00:00</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.iniciarTimer()" id="btn-timer-start" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-lg font-bold transition-colors shadow-md">
+                            <i class="fa-solid fa-play mr-1"></i> Iniciar Foco
+                        </button>
+                        <button onclick="window.pausarTimer()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-md">
+                            <i class="fa-solid fa-pause"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-6 relative z-20">
+                    <!-- Bloco Teoria -->
+                    <div class="bg-slate-900/80 rounded-2xl p-6 border-l-4 border-blue-500 shadow-lg group">
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="font-bold text-blue-400 text-xl flex items-center gap-2">
+                                <i class="fa-solid fa-brain"></i> Fase 1: Inteligência (Teoria)
+                            </h4>
+                            <span id="tempo-teoria" class="text-xs font-bold text-blue-300 bg-blue-900/30 border border-blue-500/20 px-3 py-1 rounded-full flex items-center h-fit"></span>
+                        </div>
+                        <div class="mb-4 inline-block bg-slate-800 px-3 py-1 rounded text-sm text-white font-medium shadow-inner border border-slate-700">
+                            <span class="text-slate-400 mr-2">Alvo Encontrado:</span> <span id="txt-topico" class="uppercase tracking-wider text-green-300 font-bold"></span>
+                        </div>
+                        <p id="txt-teoria" class="text-slate-300 leading-relaxed mb-6"></p>
+                        
+                        <div class="bg-slate-950/50 border border-slate-700 rounded-xl p-6 relative shadow-inner mt-4">
+                            <div class="absolute -top-3 left-6 bg-green-600 text-white text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-[0_0_10px_rgba(22,163,74,0.4)] flex items-center gap-2">
+                                <i class="fa-solid fa-thumbtack"></i> Resumo Tático (IA)
+                            </div>
+                            <div id="txt-resumo-tatico" class="text-sm md:text-base text-slate-200 leading-relaxed mt-2 space-y-4"></div>
+                        </div>
+                    </div>
+
+                    <!-- Bloco Prática -->
+                    <div class="bg-slate-900/80 rounded-2xl p-6 border-l-4 border-red-500 shadow-lg">
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="font-bold text-red-400 text-xl flex items-center gap-2">
+                                <i class="fa-solid fa-crosshairs"></i> Fase 2: Combate (Simulado)
+                            </h4>
+                            <span id="tempo-pratica" class="text-xs font-bold text-red-300 bg-red-900/30 border border-red-500/20 px-3 py-1 rounded-full flex items-center h-fit"></span>
+                        </div>
+                        <div id="txt-pratica" class="text-slate-300 text-sm mb-6"></div>
+                        
+                        <div id="questoes-container" class="space-y-6"></div>
+                    </div>
+
+                    <!-- Bloco Revisão -->
+                    <div class="bg-slate-900/80 rounded-2xl p-6 border-l-4 border-yellow-500 shadow-lg relative group transition-all hover:bg-slate-800/80">
+                        <div class="flex justify-between items-start mb-4">
+                            <h4 class="font-bold text-yellow-400 text-xl flex items-center gap-2">
+                                <i class="fa-solid fa-rotate"></i> Fase 3: Extração (Revisão)
+                            </h4>
+                            <span id="tempo-revisao" class="text-xs font-bold text-yellow-300 bg-yellow-900/30 border border-yellow-500/20 px-3 py-1 rounded-full flex items-center h-fit"></span>
+                        </div>
+                        <p id="txt-revisao" class="text-slate-300 leading-relaxed"></p>
+                    </div>
+                </div>
+                
+                <div class="mt-8 relative p-1 rounded-2xl bg-gradient-to-r from-green-600 via-emerald-400 to-green-600 shadow-[0_0_30px_rgba(22,163,74,0.3)]">
+                    <div class="bg-slate-900 rounded-xl p-6 h-full w-full">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500 shadow-inner">
+                                <i class="fa-solid fa-star text-green-400 text-xl"></i>
+                            </div>
+                            <h4 class="font-black text-white text-lg uppercase tracking-wide">O Bizú do General (Estratégia)</h4>
+                        </div>
+                        <p id="txt-bizu" class="text-slate-300 font-medium leading-relaxed italic border-l-2 border-green-500/50 pl-4 ml-5"></p>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação Final -->
+                <div class="mt-6 flex flex-col md:flex-row gap-3 no-print">
+                    <button onclick="window.print()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-file-pdf text-red-400"></i> Baixar Papiro (PDF)
+                    </button>
+                    <button onclick="window.shareWhatsAppMissao()" class="flex-1 bg-green-700 hover:bg-green-600 border border-green-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fa-brands fa-whatsapp text-white text-xl"></i> Partilhar Conquista
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão Chat IA -->
+    <button onclick="window.toggleChat()" class="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-tr from-green-700 to-green-500 rounded-full shadow-[0_0_20px_rgba(22,163,74,0.5)] flex items-center justify-center text-white text-2xl hover:scale-110 transition-all z-50 group border-2 border-green-400 no-print">
+        <i class="fa-solid fa-robot"></i>
+        <span class="absolute -top-12 right-0 bg-slate-800 text-xs text-white px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-green-500/50 shadow-lg pointer-events-none font-bold">Sargento IA</span>
+    </button>
+
+    <!-- Janela Chat IA -->
+    <div id="chat-ia" class="fixed bottom-28 right-6 w-[340px] md:w-[420px] bg-slate-900 border border-slate-700 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 flex flex-col overflow-hidden chat-hidden no-print">
+        <div class="bg-gradient-to-r from-green-800 to-slate-900 border-b border-green-600/50 p-4 flex justify-between items-center z-10 relative">
+            <div class="flex items-center gap-3 relative z-10">
+                <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center border-2 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                    <i class="fa-solid fa-user-shield text-green-400 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-lg leading-tight">Sargento IA</h3>
+                    <p class="text-[10px] text-green-400 uppercase tracking-widest font-bold flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online (Voz Ativa)
+                    </p>
+                </div>
+            </div>
+            <button onclick="window.toggleChat()" class="text-slate-400 hover:text-white transition-colors relative z-10"><i class="fa-solid fa-xmark text-2xl"></i></button>
+        </div>
+        
+        <div id="chat-messages" class="h-[60vh] max-h-[400px] overflow-y-auto p-4 space-y-4 bg-slate-950/90 scroll-smooth flex-1">
+            <div class="chat-message flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-green-800 flex-shrink-0 flex items-center justify-center text-xs border border-green-500 mt-1 shadow-inner"><i class="fa-solid fa-robot text-green-300"></i></div>
+                <div class="bg-slate-800 rounded-2xl rounded-tl-none p-4 text-sm text-slate-200 border border-slate-700 shadow-sm leading-relaxed group relative">
+                    <strong>Brasil!</strong> Estou conectado à rede para organizar o seu papiro.<br><br>Qual é a sua dúvida operacional?
+                </div>
+            </div>
+        </div>
+
+        <div class="p-3 bg-slate-900 border-t border-slate-700">
+            <form id="chat-form" onsubmit="window.enviarMensagemIA(event)" class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="Digite sua dúvida..." class="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-green-500" required autocomplete="off">
+                <button type="submit" class="bg-green-600 hover:bg-green-500 text-white w-12 rounded-xl flex items-center justify-center transition-all shadow-md">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Módulo Central JavaScript -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // === CONFIGURAÇÕES E ESTADO ===
+        const apiKey = "AIzaSyAx7liqk-Ho5rG2WzrOQFPYgg4zU6AeVSI";
+        
+        let app, auth, db, appId, userId;
+        let isLoginMode = true;
+
+        let progressoAluno = { 
+            totalVistos: 0, 
+            materias: {},
+            acertos: 0,
+            erros: 0,
+            streak: 0,
+            lastStudyDate: null
+        };
+        
+        let timerInterval;
+        let tempoRestante = 0;
+        let missaoAtualContexto = null;
+
+        const distTempos = {
+            curto: { teoria: "30 min", pratica: "45 min", revisao: "15 min" },
+            medio: { teoria: "1h", pratica: "2h", revisao: "30 min" },
+            longo: { teoria: "1h 30m", pratica: "3h", revisao: "45 min" }
+        };
+
+        // === EFEITOS SONOROS (WEB AUDIO API) ===
+        let sfxCtx = null;
+        function initSFX() { if(!sfxCtx) sfxCtx = new (window.AudioContext || window.webkitAudioContext)(); if(sfxCtx.state === 'suspended') sfxCtx.resume(); }
+        function playTone(freq, type, duration, vol=0.1) {
+            initSFX(); if(!sfxCtx) return;
+            const osc = sfxCtx.createOscillator(); const gain = sfxCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, sfxCtx.currentTime);
+            gain.gain.setValueAtTime(vol, sfxCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, sfxCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(sfxCtx.destination);
+            osc.start(); osc.stop(sfxCtx.currentTime + duration);
+        }
+        function playSfxClick() { playTone(1200, 'square', 0.05, 0.02); }
+        function playSfxCorrect() { playTone(600, 'sine', 0.1, 0.1); setTimeout(()=>playTone(800, 'sine', 0.2, 0.1), 100); }
+        function playSfxWrong() { playTone(300, 'sawtooth', 0.3, 0.1); }
+        function playSfxLevelUp() { [300,400,500,600,800].forEach((f,i)=>setTimeout(()=>playTone(f,'square',0.1,0.05), i*100)); }
+
+        // === SISTEMA DE ACESSO EXCLUSIVO DO CRIADOR ===
+        const SENHA_CRIADOR = "jhony2007caveira";
+        let adminClicks = 0;
+
+        window.triggerAdmin = function() {
+            adminClicks++;
+            if (adminClicks >= 5) {
+                adminClicks = 0;
+                const modal = document.getElementById('modal-admin-prompt');
+                document.getElementById('admin-pass-input').value = '';
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0'), 10);
+                setTimeout(() => document.getElementById('admin-pass-input').focus(), 350);
+            }
+        };
+
+        window.closeAdminPrompt = function() {
+            const modal = document.getElementById('modal-admin-prompt');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        window.submitAdminPrompt = function() {
+            const input = document.getElementById('admin-pass-input').value;
+            window.closeAdminPrompt();
+            if (input === SENHA_CRIADOR) {
+                localStorage.setItem('esa_qg_acesso_criador', 'concedido');
+                window.showAlert("Acesso de Criador Confirmado. Bem-vindo de volta, Jhony!");
+                window.aplicarAdminUI();
+            } else if (input !== "") {
+                window.showAlert("Senha incorreta. O exército não tolera invasores!");
+            }
+        };
+
+        window.aplicarAdminUI = function() {
+            if (localStorage.getItem('esa_qg_acesso_criador') === 'concedido') {
+                if (!document.getElementById('admin-badge')) {
+                    const badgeHTML = '<div id="admin-badge" class="bg-yellow-900/50 border border-yellow-500 text-yellow-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-[0_0_10px_rgba(234,179,8,0.3)]"><i class="fa-solid fa-crown"></i> <span class="hidden md:inline">CRIADOR</span></div>';
+                    document.getElementById('right-controls').appendChild(document.createRange().createContextualFragment(badgeHTML));
+                }
+            }
+        };
+
+        // === ALERTAS E MODAIS ===
+        window.showAlert = function(msg) {
+            document.getElementById('alert-message').innerText = msg;
+            const modal = document.getElementById('modal-alert');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        };
+
+        window.fecharAlert = function() {
+            const modal = document.getElementById('modal-alert');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        // === SISTEMA DE LOGIN CUSTOMIZADO VIA NUVEM FIRESTORE ===
+        const encodeId = (str) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+        window.openAuthModal = function() {
+            document.getElementById('auth-email').value = '';
+            document.getElementById('auth-pass').value = '';
+            document.getElementById('auth-error').classList.add('hidden');
+            const modal = document.getElementById('modal-auth');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        };
+
+        window.closeAuthModal = function() {
+            const modal = document.getElementById('modal-auth');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        window.toggleAuthMode = function() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-error').classList.add('hidden');
+            if (isLoginMode) {
+                document.getElementById('auth-title').innerText = "Acesso ao QG";
+                document.getElementById('auth-subtitle').innerText = "Entre com as suas credenciais";
+                document.getElementById('auth-submit-btn').innerText = "ENTRAR";
+                document.getElementById('auth-toggle-btn').innerHTML = "Novo recruta? <u>Aliste-se aqui</u>";
+            } else {
+                document.getElementById('auth-title').innerText = "Alistamento Militar";
+                document.getElementById('auth-subtitle').innerText = "Crie uma conta para salvar o papiro";
+                document.getElementById('auth-submit-btn').innerText = "CRIAR CONTA";
+                document.getElementById('auth-toggle-btn').innerHTML = "Já possui conta? <u>Entre aqui</u>";
+            }
+        };
+
+        function userCheck() { return (auth && auth.currentUser && db && appId && userId); }
+
+        window.submitAuth = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value.toLowerCase().trim();
+            const pass = document.getElementById('auth-pass').value;
+            const errorEl = document.getElementById('auth-error');
+            const btn = document.getElementById('auth-submit-btn');
+            
+            errorEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            try {
+                if (!userCheck()) throw new Error("A conexão com a nuvem central falhou. Aguarde.");
+
+                const userDocId = encodeId(email);
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', userDocId);
+                const docSnap = await getDoc(docRef);
+
+                if (isLoginMode) {
+                    if (!docSnap.exists()) throw new Error("Conta não encontrada. Verifique o E-mail.");
+                    const data = docSnap.data();
+                    if (data.pass !== btoa(pass)) throw new Error("Senha incorreta.");
+
+                    localStorage.setItem('esa_qg_logado', email);
+                    if (data.progresso) {
+                        progressoAluno = data.progresso;
+                        localStorage.setItem('esa_qg_progresso', JSON.stringify(progressoAluno));
+                        window.atualizarPatenteUI();
+                    }
+                    window.showAlert("Operação de login concluída com sucesso!");
+                } else {
+                    if (docSnap.exists()) throw new Error("Este E-mail já está alistado no sistema.");
+
+                    await setDoc(docRef, {
+                        email: email,
+                        pass: btoa(pass),
+                        progresso: progressoAluno
+                    });
+                    localStorage.setItem('esa_qg_logado', email);
+                    window.showAlert("Alistamento concluído! Bem-vindo ao QG.");
+                }
+                
+                window.atualizarIdentificacaoUI();
+                window.closeAuthModal();
+            } catch(err) {
+                errorEl.innerText = "Negativo: " + err.message;
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        };
+
+        window.logoutUser = function() {
+            localStorage.removeItem('esa_qg_logado');
+            window.showAlert("Deslogado com sucesso. Retornando ao acesso anônimo local.");
+            progressoAluno = { totalVistos: 0, materias: {}, acertos: 0, erros: 0, streak: 0, lastStudyDate: null };
+            window.atualizarPatenteUI();
+            window.atualizarIdentificacaoUI();
+        };
+
+        window.atualizarIdentificacaoUI = function() {
+            const localEmail = localStorage.getItem('esa_qg_logado');
+            if (localEmail) {
+                document.getElementById('cloud-status').innerHTML = `<i class="fa-solid fa-user-check text-green-400"></i> <span class="hidden md:inline">${localEmail}</span>`;
+                document.getElementById('auth-btn').innerHTML = `<i class="fa-solid fa-right-from-bracket text-red-400"></i> <span class="hidden md:inline">Sair</span>`;
+                document.getElementById('auth-btn').onclick = window.logoutUser;
+            } else {
+                document.getElementById('cloud-status').innerHTML = '<i class="fa-solid fa-user-secret text-slate-400"></i> <span class="hidden md:inline">Anônimo</span>';
+                document.getElementById('auth-btn').innerHTML = `<i class="fa-solid fa-right-to-bracket text-blue-400"></i> <span class="hidden md:inline">Entrar / Alistar</span>`;
+                document.getElementById('auth-btn').onclick = window.openAuthModal;
+            }
+        };
+
+        window.loadFromCloud = async function() {
+            if(!userCheck()) return;
+            const emailLogado = localStorage.getItem('esa_qg_logado');
+            
+            try {
+                if (emailLogado) {
+                    const userDocId = encodeId(emailLogado);
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', userDocId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists() && docSnap.data().progresso) {
+                        progressoAluno = docSnap.data().progresso;
+                    }
+                } else {
+                    const docRef = doc(db, 'artifacts', appId, 'users', userId, 'progresso', 'dados');
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        progressoAluno = docSnap.data().data;
+                    }
+                }
+                localStorage.setItem('esa_qg_progresso', JSON.stringify(progressoAluno));
+                window.atualizarPatenteUI();
+            } catch(e) {}
+        }
+
+        window.saveToCloud = async function() {
+            localStorage.setItem('esa_qg_progresso', JSON.stringify(progressoAluno));
+            if(!userCheck()) return;
+
+            const emailLogado = localStorage.getItem('esa_qg_logado');
+            try {
+                if (emailLogado) {
+                    const userDocId = encodeId(emailLogado);
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', userDocId);
+                    await setDoc(docRef, { progresso: progressoAluno }, { merge: true });
+                } else {
+                    const docRef = doc(db, 'artifacts', appId, 'users', userId, 'progresso', 'dados');
+                    await setDoc(docRef, { data: progressoAluno });
+                }
+            } catch(e) {}
+        }
+
+        // === INICIALIZAÇÃO GERAL E FIREBASE ===
+        window.initApp = async function() {
+            const localData = localStorage.getItem('esa_qg_progresso');
+            if (localData) {
+                try { 
+                    progressoAluno = { ...progressoAluno, ...JSON.parse(localData) }; 
+                } catch (e) { console.error("Erro ao ler progresso local", e); }
+            }
+            window.aplicarAdminUI();
+            window.verificarOfensiva();
+            window.atualizarPatenteUI();
+            window.initRadarChart();
+
+            // Firebase Init (Transição para a Internet Real Concluída)
+            let firebaseConfig = null;
+            if (typeof __firebase_config !== 'undefined') {
+                firebaseConfig = JSON.parse(__firebase_config); // Ambiente Sandbox
+                appId = typeof __app_id !== 'undefined' ? __app_id.split('/')[0] : 'default-app-id';
+            } else {
+                // AMBIENTE DE PRODUÇÃO COM AS SUAS CHAVES OFICIAIS:
+                firebaseConfig = {
+                    apiKey: "AIzaSyCmbO4oTcKgLgx4qyPlDjn-cYpUJJo5bcg",
+                    authDomain: "qg-esa.firebaseapp.com",
+                    projectId: "qg-esa",
+                    storageBucket: "qg-esa.firebasestorage.app",
+                    messagingSenderId: "780206241148",
+                    appId: "1:780206241148:web:421df6567eb6ce1411a0f9"
+                };
+                appId = "qg-esa-oficial"; // Identificador limpo e seguro para a base de dados
+            }
+
+            if (firebaseConfig) {
+                try {
+                    app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    
+                    const initAuth = async () => {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            try {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                                return;
+                            } catch (err) {}
+                        } 
+                        await signInAnonymously(auth);
+                    };
+
+                    await initAuth();
+
+                    onAuthStateChanged(auth, async (u) => {
+                        if(u) {
+                            userId = u.uid;
+                            window.atualizarIdentificacaoUI();
+                            await window.loadFromCloud();
+                        }
+                    });
+                } catch(e) {
+                    console.log("Firebase falhou", e);
+                }
+            }
+        }
+
+        // === SISTEMA DE OFENSIVA (STREAK) ===
+        window.verificarOfensiva = function() {
+            const today = new Date().toDateString();
+            if (progressoAluno.lastStudyDate !== today) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                if (progressoAluno.lastStudyDate === yesterday.toDateString()) {
+                    // Mantém ofensiva
+                } else if (progressoAluno.lastStudyDate) {
+                    progressoAluno.streak = 0; // Perdeu a ofensiva
+                }
+                localStorage.setItem('esa_qg_progresso', JSON.stringify(progressoAluno));
+            }
+            document.getElementById('streak-display').innerText = `${progressoAluno.streak || 0} Dias`;
+        }
+
+        window.computarOfensivaDiaria = function() {
+            const today = new Date().toDateString();
+            if (progressoAluno.lastStudyDate !== today) {
+                progressoAluno.streak = (progressoAluno.streak || 0) + 1;
+                progressoAluno.lastStudyDate = today;
+                document.getElementById('streak-display').innerText = `${progressoAluno.streak} Dias`;
+                localStorage.setItem('esa_qg_progresso', JSON.stringify(progressoAluno));
+                if (typeof window.saveToCloud === 'function') window.saveToCloud();
+            }
+        }
+
+        // === RÁDIO TÁTICA ===
+        let radioCtx, noiseNodeRadio, gainNodeRadio;
+        let isRadioPlaying = false;
+
+        window.toggleRadio = function() {
+            const icon = document.getElementById('radio-icon');
+            const btn = document.getElementById('radio-btn');
+            
+            if(isRadioPlaying) {
+                if(radioCtx) radioCtx.suspend();
+                isRadioPlaying = false;
+                icon.classList.replace('fa-volume-high', 'fa-volume-xmark');
+                icon.classList.replace('text-green-400', 'text-blue-400');
+                btn.classList.remove('animate-pulse');
+            } else {
+                if(!radioCtx) {
+                    radioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    let bufferSize = 2 * radioCtx.sampleRate;
+                    let noiseBuffer = radioCtx.createBuffer(1, bufferSize, radioCtx.sampleRate);
+                    let output = noiseBuffer.getChannelData(0);
+                    
+                    let lastOut = 0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        let white = Math.random() * 2 - 1;
+                        output[i] = (lastOut + (0.02 * white)) / 1.02;
+                        lastOut = output[i];
+                        output[i] *= 3.5;
+                    }
+                    
+                    noiseNodeRadio = radioCtx.createBufferSource();
+                    noiseNodeRadio.buffer = noiseBuffer;
+                    noiseNodeRadio.loop = true;
+                    
+                    gainNodeRadio = radioCtx.createGain();
+                    gainNodeRadio.gain.value = 0.4;
+                    
+                    noiseNodeRadio.connect(gainNodeRadio);
+                    gainNodeRadio.connect(radioCtx.destination);
+                    noiseNodeRadio.start(0);
+                }
+                radioCtx.resume();
+                isRadioPlaying = true;
+                icon.classList.replace('fa-volume-xmark', 'fa-volume-high');
+                icon.classList.replace('text-blue-400', 'text-green-400');
+                btn.classList.add('animate-pulse');
+            }
+        };
+
+        // === RADAR DE DESEMPENHO (CHART.JS) ===
+        let radarChartInstance = null;
+        window.initRadarChart = function() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            const materiasKeys = ['matematica', 'portugues', 'literatura', 'redacao', 'historia', 'geografia', 'ingles'];
+            const labels = ['Matem.', 'Portug.', 'Literat.', 'Redação', 'História', 'Geografia', 'Inglês'];
+            const dataValues = materiasKeys.map(k => progressoAluno.materias?.[k]?.seen?.length || 0);
+
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Tópicos Dominados',
+                        data: dataValues,
+                        backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                        pointBorderColor: '#fff',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        r: { angleLines: { color: 'rgba(255, 255, 255, 0.1)' }, grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                             pointLabels: { color: '#94a3b8', font: { size: 10, family: 'Inter' } }, ticks: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        window.updateRadarChart = function() {
+            if(!radarChartInstance) return;
+            const materiasKeys = ['matematica', 'portugues', 'literatura', 'redacao', 'historia', 'geografia', 'ingles'];
+            radarChartInstance.data.datasets[0].data = materiasKeys.map(k => progressoAluno.materias?.[k]?.seen?.length || 0);
+            radarChartInstance.update();
+        }
+
+        // === COMPARTILHAMENTO WHATSAPP ===
+        window.shareWhatsAppRank = function() {
+            const patente = document.getElementById('rank-title').innerText;
+            const msg = `Fui promovido a *${patente}* no QG do Aluno ESA! Minha ofensiva: 🔥${progressoAluno.streak} dias. O papiro não para! 💀🎖️ Rumo à aprovação!`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
+        window.shareWhatsAppMissao = function() {
+            if(!missaoAtualContexto) return;
+            const msg = `Acabei de concluir uma missão de *${missaoAtualContexto.materia}* (Nível ${missaoAtualContexto.nivel}) no QG ESA. Preparação Tática 2026! 💀🚀`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
+        // === SISTEMA DE PATENTES E XP ===
+        const patentes = [
+            { nome: 'Recruta', max: 5 }, { nome: 'Soldado', max: 15 },
+            { nome: 'Cabo', max: 30 }, { nome: '3º Sargento', max: 50 },
+            { nome: '2º Sargento', max: 80 }, { nome: '1º Sargento', max: 999 }
+        ];
+
+        window.atualizarPatenteUI = function() {
+            let total = progressoAluno.totalVistos || 0;
+            let currentPatente = patentes[0];
+            let prevMax = 0;
+
+            for(let p of patentes) {
+                if(total <= p.max) { currentPatente = p; break; }
+                prevMax = p.max;
+            }
+
+            document.getElementById('rank-title').innerText = currentPatente.nome;
+            document.getElementById('stat-missoes').innerText = total;
+            
+            const totalCaveira = Object.keys(progressoAluno.materias || {}).reduce((acc, m) => acc + (progressoAluno.materias[m].currentLevel === 'CAVEIRA' ? 1 : 0), 0);
+            document.getElementById('stat-caveira').innerText = totalCaveira;
+            
+            let totalRespondidas = (progressoAluno.acertos || 0) + (progressoAluno.erros || 0);
+            let accuracy = totalRespondidas > 0 ? Math.round((progressoAluno.acertos / totalRespondidas) * 100) : 0;
+            document.getElementById('stat-accuracy').innerText = `${accuracy}%`;
+            
+            let progressoNivel = total - prevMax;
+            let metaNivel = currentPatente.max - prevMax;
+            let pct = Math.min(100, Math.max(0, (progressoNivel / metaNivel) * 100));
+            
+            document.getElementById('xp-text').innerText = `${progressoNivel} / ${metaNivel} Tópicos`;
+            document.getElementById('xp-bar').style.width = `${pct}%`;
+            
+            window.updateRadarChart();
+        }
+
+        window.registrarProgressoMateria = function(materiaId, novoTopico) {
+            if(!progressoAluno.materias) progressoAluno.materias = {};
+            if(!progressoAluno.materias[materiaId]) progressoAluno.materias[materiaId] = { seen: [], currentLevel: 'BÁSICO' };
+            
+            let p = progressoAluno.materias[materiaId];
+            let oldLevel = p.currentLevel;
+            let leveledUp = false;
+
+            if(!p.seen.includes(novoTopico)) {
+                p.seen.push(novoTopico);
+                progressoAluno.totalVistos = (progressoAluno.totalVistos || 0) + 1;
+                
+                if (p.seen.length >= 8) p.currentLevel = 'CAVEIRA';
+                else if (p.seen.length >= 4) p.currentLevel = 'PADRÃO';
+                else p.currentLevel = 'BÁSICO';
+                
+                leveledUp = (oldLevel !== p.currentLevel);
+                if(leveledUp) playSfxLevelUp();
+                
+                window.computarOfensivaDiaria();
+                localStorage.setItem('esa_qg_progresso', JSON.stringify(progressoAluno));
+                if (typeof window.saveToCloud === 'function') window.saveToCloud();
+                window.atualizarPatenteUI();
+            }
+            return { currentLevel: p.currentLevel, seenTopics: p.seen, leveledUp: leveledUp };
+        }
+
+        // === IA GERADORA DE DOSSIÊS ===
+        window.fetchDossieIA = async function(materia, nivel, topicosVistos) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+            const listaVistos = topicosVistos.length > 0 ? topicosVistos.join(', ') : 'Nenhum';
+            
+            const userPrompt = `Aja como Sargento instrutor da ESA.
+Materia: ${materia}. Dificuldade: ${nivel}. Evitar: [${listaVistos}].
+Gere um tópico inédito da ESA.
+O simulado deve ter EXATAMENTE 5 QUESTÕES inéditas com 5 ALTERNATIVAS (a, b, c, d, e) cada.
+Retorne ESTRITAMENTE o formato JSON válido:
+{
+  "topico": "Nome", "incidencia": "ALTA", "nivel": "${nivel}",
+  "teoria": "Teoria tática em 2 parágrafos...",
+  "resumoTatico": "Use HTML TailwindCSS...",
+  "bizu": "Dica de ouro...",
+  "questoes": [
+    { "enunciado": "Pergunta 1", "a": "Opção", "b": "Opção", "c": "Opção", "d": "Opção", "e": "Opção", "correta": "a", "explicacao": "Explicação 1" },
+    { "enunciado": "Pergunta 2", "a": "Opção", "b": "Opção", "c": "Opção", "d": "Opção", "e": "Opção", "correta": "b", "explicacao": "Explicação 2" },
+    { "enunciado": "Pergunta 3", "a": "Opção", "b": "Opção", "c": "Opção", "d": "Opção", "e": "Opção", "correta": "c", "explicacao": "Explicação 3" },
+    { "enunciado": "Pergunta 4", "a": "Opção", "b": "Opção", "c": "Opção", "d": "Opção", "e": "Opção", "correta": "d", "explicacao": "Explicação 4" },
+    { "enunciado": "Pergunta 5", "a": "Opção", "b": "Opção", "c": "Opção", "d": "Opção", "e": "Opção", "correta": "e", "explicacao": "Explicação 5" }
+  ]
+}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: "Você é instrutor ESA. Retorne APENAS JSON." }] },
+                generationConfig: { 
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            topico: { type: "STRING" }, incidencia: { type: "STRING" }, nivel: { type: "STRING" },
+                            teoria: { type: "STRING" }, resumoTatico: { type: "STRING" }, bizu: { type: "STRING" },
+                            questoes: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        enunciado: { type: "STRING" }, a: { type: "STRING" }, b: { type: "STRING" }, c: { type: "STRING" }, d: { type: "STRING" }, e: { type: "STRING" },
+                                        correta: { type: "STRING" }, explicacao: { type: "STRING" }
+                                    }, required: ["enunciado", "a", "b", "c", "d", "e", "correta", "explicacao"]
+                                }
+                            }
+                        }, required: ["topico", "incidencia", "nivel", "teoria", "resumoTatico", "bizu", "questoes"]
+                    }
+                }
+            };
+
+            for(let i=0; i<5; i++) {
+                try {
+                    const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        const errData = await response.json().catch(()=>({}));
+                        throw new Error(`[${response.status}] ${errData.error?.message || ''}`);
+                    }
+                    const result = await response.json();
+                    let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) throw new Error("Resposta vazia da IA.");
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) throw new Error("Formato JSON inválido.");
+                    return JSON.parse(jsonMatch[0]);
+                } catch (e) {
+                    if (i === 4) throw new Error("Falha de Comunicação: " + e.message);
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); 
+                }
+            }
+        }
+
+        window.iniciarProcessamento = async function() {
+            playSfxClick();
+            const btn = document.getElementById('btn-gerar');
+            btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('resultado-container').classList.add('hidden');
+            document.getElementById('loading-state').classList.remove('hidden');
+
+            const matSelect = document.getElementById('select-materia');
+            const materiaId = matSelect.value;
+            const nomeMateria = matSelect.options[matSelect.selectedIndex].text;
+            const nivelAtual = progressoAluno.materias?.[materiaId]?.currentLevel || 'BÁSICO';
+            const vistos = progressoAluno.materias?.[materiaId]?.seen || [];
+
+            try {
+                const dados = await window.fetchDossieIA(nomeMateria, nivelAtual, vistos);
+                const infoProgresso = window.registrarProgressoMateria(materiaId, dados.topico);
+                
+                const tempoSelect = document.getElementById('select-tempo');
+                const minutos = parseInt(tempoSelect.options[tempoSelect.selectedIndex].getAttribute('data-min'));
+                window.resetTimer(minutos);
+
+                window.renderizarPlano(nomeMateria, infoProgresso, dados);
+                playTone(1000, 'square', 0.1, 0.05); // Sucesso
+            } catch(e) {
+                window.showAlert(e.message);
+            }
+
+            document.getElementById('loading-state').classList.add('hidden');
+            btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        };
+
+        window.renderizarPlano = function(nomeMateria, infoProgresso, dados) {
+            document.getElementById('titulo-missao').innerText = nomeMateria;
+            document.getElementById('badge-nivel').innerText = dados.nivel;
+            document.getElementById('badge-nivel').className = `text-sm font-black ${dados.nivel==='CAVEIRA'?'text-red-500':(dados.nivel==='BÁSICO'?'text-green-400':'text-yellow-400')}`;
+            document.getElementById('badge-incidencia').innerText = dados.incidencia || "ALTA";
+            
+            if(infoProgresso.leveledUp) document.getElementById('badge-levelup').classList.remove('hidden');
+            else document.getElementById('badge-levelup').classList.add('hidden');
+
+            document.getElementById('txt-topico').innerText = dados.topico;
+            document.getElementById('txt-teoria').innerText = dados.teoria;
+            document.getElementById('txt-resumo-tatico').innerHTML = dados.resumoTatico;
+            document.getElementById('txt-bizu').innerText = dados.bizu;
+
+            const tempoId = document.getElementById('select-tempo').value;
+            const tempos = distTempos[tempoId];
+            if(tempos) {
+                document.getElementById('tempo-teoria').innerText = tempos.teoria;
+                document.getElementById('tempo-pratica').innerText = tempos.pratica;
+                document.getElementById('tempo-revisao').innerText = tempos.revisao;
+            }
+
+            const materiaId = document.getElementById('select-materia').value;
+
+            if(materiaId === 'redacao') {
+                document.getElementById('txt-pratica').innerHTML = `Escreva <strong>1 redação completa sobre o eixo "${dados.topico}"</strong>. <br><br><span class="text-red-300"><i class="fa-solid fa-triangle-exclamation"></i> Cronometre o tempo. Máximo 1 hora.</span>`;
+                document.getElementById('txt-revisao').innerHTML = `Revise sua redação buscando erros e compare com o Resumo Tático.`;
+            } else {
+                document.getElementById('txt-pratica').innerHTML = `A Inteligência gerou um simulado Padrão ESA (5 alternativas). Responda clicando na alternativa simulando prova real.`;
+                document.getElementById('txt-revisao').innerHTML = `Copie o <strong>Resumo Tático</strong> para seu caderno físico e anote os erros do combate.`;
+            }
+
+            const qContainer = document.getElementById('questoes-container');
+            qContainer.innerHTML = '';
+            
+            if(dados.questoes && Array.isArray(dados.questoes)) {
+                dados.questoes.forEach((q, idx) => {
+                    const corretaLetra = (q.correta || 'a').toLowerCase().trim();
+                    qContainer.innerHTML += `
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-4 shadow-sm" id="q-box-${idx}" data-respondida="false">
+                            <div class="font-bold text-white mb-3"><span class="text-red-400">Q${idx+1}.</span> ${q.enunciado}</div>
+                            <div class="space-y-2">
+                                ${['a','b','c','d','e'].map(l => `
+                                    <div onclick="window.verificarResposta(${idx}, '${l}', '${corretaLetra}')" class="questao-card border border-slate-700 rounded-lg p-3 text-sm text-slate-300 flex items-start gap-3" id="opt-${idx}-${l}">
+                                        <span class="font-bold uppercase bg-slate-900 text-slate-400 w-6 h-6 rounded flex items-center justify-center shrink-0 border border-slate-700">${l}</span>
+                                        <span class="mt-0.5">${q[l] || ''}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div id="exp-${idx}" class="hidden mt-4 bg-slate-900 p-4 rounded-lg border-l-2 border-green-500 text-sm text-slate-300">
+                                <strong class="text-green-400 block mb-1">Análise Tática:</strong> ${q.explicacao}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('resultado-container').classList.remove('hidden');
+            document.getElementById('resultado-container').classList.add('fade-in-up');
+            setTimeout(() => document.getElementById('resultado-container').scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+
+        // === SIMULADO E PERFORMANCE ===
+        window.verificarResposta = function(idx, selecionada, correta) {
+            const container = document.getElementById(`q-box-${idx}`);
+            if (container.dataset.respondida === "true") return; 
+            container.dataset.respondida = "true";
+
+            let acertou = (selecionada === correta);
+            if(acertou) {
+                playSfxCorrect();
+                progressoAluno.acertos = (progressoAluno.acertos || 0) + 1;
+            } else {
+                playSfxWrong();
+                progressoAluno.erros = (progressoAluno.erros || 0) + 1;
+            }
+            
+            localStorage.setItem('esa_qg_progresso', JSON.stringify(progressoAluno));
+            if (typeof window.saveToCloud === 'function') window.saveToCloud();
+            window.atualizarPatenteUI();
+
+            ['a','b','c','d','e'].forEach(l => {
+                const el = document.getElementById(`opt-${idx}-${l}`);
+                if (el) {
+                    el.classList.remove('questao-correta', 'questao-errada', 'questao-card');
+                    el.style.pointerEvents = 'none';
+                    if(l === correta) el.classList.add('questao-correta');
+                    else if(l === selecionada && l !== correta) el.classList.add('questao-errada');
+                }
+            });
+            document.getElementById(`exp-${idx}`).classList.remove('hidden');
+        };
+
+        // === CRONÓMETRO ===
+        window.resetTimer = function(minutos) {
+            clearInterval(timerInterval); tempoRestante = minutos * 60; window.updateTimerDisplay();
+            const btn = document.getElementById('btn-timer-start');
+            btn.innerHTML = '<i class="fa-solid fa-play mr-1"></i> Iniciar Foco';
+            btn.classList.replace('bg-orange-600', 'bg-green-600'); btn.classList.replace('hover:bg-orange-500', 'hover:bg-green-500');
+            document.getElementById('timer-icon').classList.remove('fa-spin');
+        }
+
+        window.updateTimerDisplay = function() {
+            const m = Math.floor(tempoRestante / 60).toString().padStart(2, '0');
+            const s = (tempoRestante % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+
+        window.iniciarTimer = function() {
+            playSfxClick();
+            if(tempoRestante <= 0) return;
+            const btn = document.getElementById('btn-timer-start');
+            if(btn.innerText.includes('Retomar') || btn.innerText.includes('Iniciar')) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Em Operação';
+                btn.classList.replace('bg-green-600', 'bg-orange-600'); btn.classList.replace('hover:bg-green-500', 'hover:bg-orange-500');
+                document.getElementById('timer-icon').classList.add('fa-spin', 'text-green-500');
+                
+                clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    tempoRestante--; window.updateTimerDisplay();
+                    if(tempoRestante <= 0) {
+                        clearInterval(timerInterval);
+                        playTone(1000, 'square', 1, 0.2); 
+                        window.showAlert("TEMPO ESGOTADO, GUERREIRO! Passe para a próxima fase da missão.");
+                        window.resetTimer(0);
+                    }
+                }, 1000);
+            }
+        };
+
+        window.pausarTimer = function() {
+            playSfxClick(); clearInterval(timerInterval);
+            const btn = document.getElementById('btn-timer-start');
+            btn.innerHTML = '<i class="fa-solid fa-play mr-1"></i> Retomar';
+            btn.classList.replace('bg-orange-600', 'bg-green-600'); btn.classList.replace('hover:bg-orange-500', 'hover:bg-green-500');
+            document.getElementById('timer-icon').classList.remove('fa-spin');
+        };
+
+        // === VOZ & CHAT IA ===
+        window.toggleModal = function() {
+            playSfxClick();
+            const modal = document.getElementById('modal-ficha');
+            if(modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden'); setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            } else {
+                modal.classList.add('opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        };
+
+        window.toggleChat = function() {
+            playSfxClick();
+            const chat = document.getElementById('chat-ia');
+            if (chat.classList.contains('chat-hidden')) {
+                chat.classList.remove('chat-hidden'); chat.classList.add('chat-visible');
+                document.getElementById('chat-input').focus();
+            } else {
+                chat.classList.remove('chat-visible'); chat.classList.add('chat-hidden');
+            }
+        };
+
+        window.falarTexto = function(textoLimpo) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(textoLimpo);
+                u.lang = 'pt-BR'; u.rate = 1.1; u.pitch = 0.9;
+                window.speechSynthesis.speak(u);
+            }
+        };
+
+        window.fetchChatGeminiAPI = async function(textoUsuario) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: textoUsuario }] }],
+                systemInstruction: { parts: [{ text: `Você é Sargento IA da ESA. Responda taticamente.` }] }
+                // O módulo 'google_search' foi removido para garantir suporte global e evitar erros 404 em contas hospedadas
+            };
+            for(let i=0; i<5; i++) {
+                try {
+                    const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        const errData = await response.json().catch(()=>({}));
+                        throw new Error(`Falha ${response.status}: ${errData.error?.message || ''}`);
+                    }
+                    const result = await response.json();
+                    if (!result.candidates || result.candidates.length === 0) throw new Error("Recusado pela IA.");
+                    return result.candidates[0].content?.parts?.[0]?.text || "Sem resposta.";
+                } catch (error) { 
+                    if (i === 4) return "Negativo. Falha de rádio. " + error.message;
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); 
+                }
+            }
+        }
+
+        window.enviarMensagemIA = async function(event) {
+            event.preventDefault(); playSfxClick();
+            if ('speechSynthesis' in window) { let u = new SpeechSynthesisUtterance(''); u.volume = 0; window.speechSynthesis.speak(u); }
+
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim(); if (!msg) return;
+
+            window.addMsgUI('usuario', msg); input.value = ''; input.disabled = true;
+            const idLoader = window.addLoaderUI();
+            
+            const resposta = await window.fetchChatGeminiAPI(msg);
+            
+            const loader = document.getElementById(idLoader);
+            if (loader) loader.remove();
+            
+            window.addMsgUI('ia', resposta);
+            window.falarTexto(resposta.replace(/\*|#/g, ''));
+            input.disabled = false; input.focus();
+        };
+
+        window.addMsgUI = function(remetente, texto) {
+            const chatMessages = document.getElementById('chat-messages');
+            const htmlTexto = texto.replace(/\*\*(.*?)\*\*/g, '<strong class="text-green-400">$1</strong>')
+                                   .split('\n').map(l => l.startsWith('-') ? `<li class="ml-3 list-disc">${l.substring(1)}</li>` : `<p>${l}</p>`).join('');
+
+            const isIA = remetente === 'ia';
+            const btnId = 'btn-falante-' + Date.now() + Math.floor(Math.random() * 1000);
+            const html = `
+                <div class="chat-message flex gap-3 ${isIA ? '' : 'flex-row-reverse'} mb-3">
+                    <div class="w-8 h-8 rounded-full ${isIA ? 'bg-green-800 border-green-500 text-green-300' : 'bg-slate-700 border-slate-600 text-white'} flex shrink-0 items-center justify-center border">
+                        <i class="fa-solid ${isIA ? 'fa-robot' : 'fa-user'}"></i>
+                    </div>
+                    <div class="${isIA ? 'bg-slate-800 border-slate-700 text-slate-200 rounded-tl-none' : 'bg-slate-700 border-slate-600 text-white rounded-tr-none'} rounded-2xl p-3 text-sm border max-w-[85%] group relative">
+                        ${htmlTexto}
+                        ${isIA ? `<button id="${btnId}" class="absolute -right-8 top-2 text-slate-500 hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-volume-high"></i></button>` : ''}
+                    </div>
+                </div>`;
+            chatMessages.insertAdjacentHTML('beforeend', html);
+            if (isIA) document.getElementById(btnId).addEventListener('click', () => window.falarTexto(texto.replace(/\*|#/g, '')));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        window.addLoaderUI = function() {
+            const id = 'loader-' + Date.now();
+            const chatMessages = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.id = id;
+            div.innerHTML = `<div class="chat-message flex gap-3 mb-3"><div class="w-8 h-8 rounded-full bg-green-800 flex shrink-0 items-center justify-center border border-green-500 text-green-300"><i class="fa-solid fa-robot"></i></div><div class="bg-slate-800 rounded-2xl rounded-tl-none p-3 text-sm text-slate-400 flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-green-500"></i> Processando...</div></div>`;
+            chatMessages.appendChild(div); chatMessages.scrollTop = chatMessages.scrollHeight; 
+            return id;
+        }
+
+        window.initApp();
+    </script>
+</body>
+</html>
