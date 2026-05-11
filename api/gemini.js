@@ -1,53 +1,66 @@
 export default async function handler(req, res) {
-    // Cabeçalhos de Segurança e CORS
+    // Configuração de CORS para permitir que o seu site fale com o servidor
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
+    // Responde a verificações do navegador
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
 
-    // 1. Puxa a chave e remove qualquer espaço em branco acidental (muito comum)
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Método não permitido. Use POST.' });
+    }
+
+    // 1. Verificação da Chave (Removendo espaços)
     const apiKey = process.env.GEMINI_API_KEY?.trim();
 
     if (!apiKey) {
-        console.error("ERRO: Chave GEMINI_API_KEY não encontrada no ambiente Vercel.");
         return res.status(500).json({ 
-            error: 'Erro de Configuração', 
-            details: 'A chave de API não foi encontrada no servidor. Verifique as Environment Variables na Vercel.' 
+            error: 'Configuração Incompleta', 
+            details: 'A variável GEMINI_API_KEY não foi encontrada na Vercel.' 
         });
     }
 
-    // Usando a URL de geração de conteúdo (v1beta ou v1 são aceitas)
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     try {
-        // 2. Garante que o corpo da requisição está correto
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        // 2. Tratamento do corpo da requisição (Evita erro 500 de JSON mal formado)
+        let bodyPayload;
+        if (typeof req.body === 'string') {
+            try {
+                bodyPayload = JSON.parse(req.body);
+            } catch (e) {
+                return res.status(400).json({ error: 'JSON Inválido', details: 'O corpo enviado não é um JSON válido.' });
+            }
+        } else {
+            bodyPayload = req.body;
+        }
 
+        // 3. Chamada à API do Google usando fetch nativo (Node 18+)
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(bodyPayload)
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error("Erro da API do Google:", data);
             return res.status(response.status).json({
-                error: 'O Google recusou a requisição',
-                details: data.error?.message || 'Erro desconhecido na API do Google.',
-                status: response.status
+                error: 'Erro na API do Google',
+                details: data.error?.message || 'Erro desconhecido.'
             });
         }
 
+        // Sucesso total
         return res.status(200).json(data);
 
     } catch (error) {
-        console.error("Erro interno no servidor da Vercel:", error);
+        console.error("Erro no Handler:", error);
         return res.status(500).json({ 
-            error: 'Falha interna no servidor', 
+            error: 'Falha Interna no Servidor', 
             details: error.message 
         });
     }
