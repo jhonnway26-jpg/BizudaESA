@@ -24,13 +24,18 @@ export default async function handler(req, res) {
     }
 
     // 3. Preparação do Alvo (Google Gemini API)
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     try {
         // 4. Tratamento Robusto do Corpo da Requisição
         let bodyPayload = req.body;
-        
-        // Se a Vercel não parsear automaticamente, fazemos o parse manual
+
+        // Caso body seja um Buffer (alguns runtimes da Vercel retornam assim)
+        if (Buffer.isBuffer(bodyPayload)) {
+            bodyPayload = bodyPayload.toString('utf-8');
+        }
+
+        // Se chegou como string, parseia para objeto
         if (typeof bodyPayload === 'string') {
             try {
                 bodyPayload = JSON.parse(bodyPayload);
@@ -38,6 +43,12 @@ export default async function handler(req, res) {
                 console.error("Erro ao parsear JSON de entrada:", e);
                 return res.status(400).json({ error: 'Dados Inválidos', details: 'O formato do pedido não é um JSON válido.' });
             }
+        }
+
+        // Guarda de segurança: body vazio ou inválido
+        if (!bodyPayload || typeof bodyPayload !== 'object') {
+            console.error("Body inválido ou ausente:", bodyPayload);
+            return res.status(400).json({ error: 'Dados Inválidos', details: 'O corpo da requisição está vazio ou em formato inválido.' });
         }
 
         // 5. Chamada de Combate (Fetch com Timeout simulado)
