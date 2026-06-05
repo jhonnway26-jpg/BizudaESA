@@ -6,6 +6,7 @@
     <title>QG do Aluno — ESA 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Barlow:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -191,6 +192,81 @@
         .tooltip-wrap { position: relative; }
         .tooltip-wrap:hover .tooltip-tip { opacity: 1; transform: translateY(0); pointer-events: none; }
         .tooltip-tip { opacity: 0; transform: translateY(4px); transition: all 0.2s; pointer-events: none; }
+
+        /* ── LOCK SCREEN ── */
+        #lock-screen {
+            position: fixed; inset: 0; z-index: 200;
+            background: #020a12;
+            display: flex; align-items: flex-start; justify-content: center;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        #lock-screen > div {
+            margin: auto;
+            width: 100%;
+        }
+        #lock-screen.unlocked { animation: unlockFade 0.6s ease forwards; }
+        @keyframes unlockFade {
+            0%  { opacity:1; transform:scale(1); }
+            40% { opacity:1; transform:scale(1.03); }
+            100%{ opacity:0; transform:scale(1.06); pointer-events:none; }
+        }
+        .pix-card {
+            background: linear-gradient(145deg, rgba(13,27,42,0.95) 0%, rgba(5,12,20,0.98) 100%);
+            border: 1px solid rgba(34,197,94,0.2);
+            box-shadow: 0 0 0 1px rgba(34,197,94,0.05), 0 40px 80px -20px rgba(0,0,0,0.8), 0 0 60px rgba(34,197,94,0.06);
+            backdrop-filter: blur(24px);
+        }
+        .pix-qr-wrap {
+            background: white; border-radius: 12px;
+            padding: 10px; display: inline-block;
+            box-shadow: 0 0 30px rgba(34,197,94,0.2), 0 0 0 2px rgba(34,197,94,0.3);
+        }
+        .pix-copy-btn {
+            background: rgba(22,163,74,0.1);
+            border: 1px solid rgba(34,197,94,0.3);
+            transition: all 0.2s;
+        }
+        .pix-copy-btn:hover { background: rgba(22,163,74,0.2); border-color: rgba(34,197,94,0.6); }
+        .lock-input {
+            background: rgba(5,12,20,0.9);
+            border: 1.5px solid rgba(51,65,85,0.8);
+            transition: all 0.2s;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+        .lock-input:focus { border-color: rgba(34,197,94,0.7); box-shadow: 0 0 0 3px rgba(34,197,94,0.1); outline: none; }
+        .lock-input.error { border-color: rgba(239,68,68,0.7) !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.1) !important; animation: shake 0.4s ease; }
+        @keyframes shake {
+            0%,100%{ transform:translateX(0); } 20%,60%{ transform:translateX(-6px); } 40%,80%{ transform:translateX(6px); }
+        }
+        .lock-btn {
+            background: linear-gradient(135deg, #15803d, #166534);
+            border: 1px solid rgba(34,197,94,0.4);
+            transition: all 0.2s;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800; letter-spacing: 0.08em;
+        }
+        .lock-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(22,163,74,0.35); }
+        .lock-btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+        .pix-pulse { animation: pixPulse 3s ease-in-out infinite; }
+        @keyframes pixPulse { 0%,100%{box-shadow:0 0 30px rgba(34,197,94,0.2),0 0 0 2px rgba(34,197,94,0.3);} 50%{box-shadow:0 0 50px rgba(34,197,94,0.4),0 0 0 2px rgba(34,197,94,0.5);} }
+        .badge-valor {
+            background: linear-gradient(135deg, rgba(22,163,74,0.2), rgba(16,185,129,0.1));
+            border: 1px solid rgba(34,197,94,0.4);
+        }
+
+        /* ── ADMIN CODES MODAL ── */
+        .code-chip {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px; letter-spacing: 0.1em;
+            background: rgba(22,163,74,0.1);
+            border: 1px solid rgba(34,197,94,0.3);
+            transition: all 0.2s;
+        }
+        .code-chip.used { background: rgba(100,116,139,0.1); border-color: rgba(100,116,139,0.3); opacity: 0.6; }
+        .code-chip.revoked { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
     </style>
 </head>
 <body class="min-h-screen px-4 py-6 md:px-8 md:py-10 flex flex-col items-center">
@@ -199,7 +275,205 @@
 <div class="bg-grid"></div>
 
 <!-- ═══════════════════════════════════════════════
-     TOP BAR
+     TELA DE BLOQUEIO PIX
+═══════════════════════════════════════════════ -->
+<div id="lock-screen">
+    <div class="pix-card rounded-3xl w-full max-w-md relative overflow-hidden">
+
+        <!-- Scanline decorativo -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl z-0">
+            <div style="position:absolute;top:-80px;left:0;right:0;height:60px;background:linear-gradient(0deg,transparent,rgba(34,197,94,0.05),transparent);animation:scan 10s linear infinite;"></div>
+        </div>
+
+        <div class="relative z-10 p-6">
+
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <div class="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/25 px-3 py-1.5 rounded-full text-[10px] font-bold text-green-400 uppercase tracking-widest mb-3">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot"></span>
+                    ACESSO EXCLUSIVO ESA 2026
+                </div>
+                <h1 class="font-cond text-3xl font-black text-white tracking-tight leading-none mb-1">
+                    QG do Aluno <span class="text-green-500">ESA</span>
+                </h1>
+                <p class="text-slate-400 text-xs leading-relaxed">Plataforma premium de preparação tática para o vestibular militar.</p>
+            </div>
+
+            <!-- Valor -->
+            <div class="flex justify-center mb-5">
+                <div class="badge-valor rounded-2xl px-8 py-3 text-center">
+                    <div class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-0.5">Investimento único</div>
+                    <div class="font-cond text-4xl font-black text-green-400 leading-none">R$ 19<span class="text-2xl">,90</span></div>
+                    <div class="text-[9px] text-green-600 mt-0.5 font-medium">Acesso vitalício · Sem mensalidade</div>
+                </div>
+            </div>
+
+            <!-- ── QR CODE CENTRALIZADO E EM DESTAQUE ── -->
+            <div class="flex flex-col items-center mb-5">
+                <div class="text-[9px] text-slate-500 uppercase font-bold tracking-widest mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-qrcode text-green-600"></i> Escaneie para pagar
+                </div>
+                <div class="pix-qr-wrap pix-pulse mb-2" id="pix-qr-wrap">
+                    <!-- QR gerado via JS como <img> para nitidez em Retina -->
+                    <canvas id="pix-qr-canvas" width="200" height="200" style="display:block;border-radius:4px;"></canvas>
+                </div>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <i class="fa-solid fa-mobile-screen text-green-600 text-xs"></i>
+                    Abra o app do banco → PIX → Ler QR Code
+                </div>
+            </div>
+
+            <!-- ── DADOS PIX ── -->
+            <div class="space-y-2 mb-5">
+                <!-- Chave + Beneficiário lado a lado -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="glass-sm rounded-xl p-2.5">
+                        <div class="text-[8px] text-slate-500 uppercase font-bold tracking-widest mb-1">Chave PIX</div>
+                        <div class="font-mono text-[10px] text-green-400 font-bold break-all leading-tight">jhonykojiro9@gmail.com</div>
+                    </div>
+                    <div class="glass-sm rounded-xl p-2.5">
+                        <div class="text-[8px] text-slate-500 uppercase font-bold tracking-widest mb-1">Beneficiário</div>
+                        <div class="text-xs text-white font-semibold leading-tight">QG DO ALUNO ESA</div>
+                        <div class="text-[8px] text-slate-500 mt-0.5">Valor: R$ 19,90</div>
+                    </div>
+                </div>
+
+                <!-- Copia e Cola -->
+                <div class="glass-sm rounded-xl p-2.5">
+                    <div class="text-[8px] text-slate-500 uppercase font-bold tracking-widest mb-1.5 flex items-center justify-between">
+                        <span>PIX Copia e Cola</span>
+                        <span class="text-green-600 normal-case font-normal">Cole no app do banco</span>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <div class="flex-1 font-mono text-[9px] text-slate-400 bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1.5 overflow-x-auto whitespace-nowrap select-all cursor-text" id="pix-code-display" title="Clique para selecionar">Gerando...</div>
+                        <button onclick="window.copiarPix()" id="btn-copy-pix"
+                            class="pix-copy-btn text-green-400 px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 flex-shrink-0 hover:text-green-300 cursor-pointer">
+                            <i class="fa-solid fa-copy text-[10px]"></i>
+                            <span id="btn-copy-label">Copiar</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instruções rápidas -->
+            <div class="glass-sm rounded-xl p-3 mb-4">
+                <div class="text-[8px] text-slate-400 uppercase font-bold tracking-widest mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-list-ol text-blue-400 text-[10px]"></i> COMO LIBERAR O ACESSO
+                </div>
+                <div class="space-y-1.5">
+                    <div class="flex gap-2 items-center text-[11px] text-slate-300">
+                        <span class="w-4 h-4 rounded-full bg-green-700 flex items-center justify-center text-[8px] font-black text-white flex-shrink-0">1</span>
+                        Pague <strong class="text-green-400">R$ 19,90</strong> via QR Code ou Copia e Cola
+                    </div>
+                    <div class="flex gap-2 items-center text-[11px] text-slate-300">
+                        <span class="w-4 h-4 rounded-full bg-green-700 flex items-center justify-center text-[8px] font-black text-white flex-shrink-0">2</span>
+                        Envie o comprovante no <strong class="text-white">WhatsApp</strong> abaixo
+                    </div>
+                    <div class="flex gap-2 items-center text-[11px] text-slate-300">
+                        <span class="w-4 h-4 rounded-full bg-green-700 flex items-center justify-center text-[8px] font-black text-white flex-shrink-0">3</span>
+                        Receba o código e <strong class="text-white">desbloqueie</strong> aqui
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp -->
+            <a href="https://api.whatsapp.com/send?phone=5567992041956&text=Ol%C3%A1!%20Fiz%20o%20PIX%20de%20R%24%2019%2C90%20para%20o%20QG%20do%20Aluno%20ESA%202026.%20Segue%20o%20comprovante.%20Preciso%20do%20meu%20c%C3%B3digo%20de%20acesso!%20%F0%9F%8E%96%EF%B8%8F"
+               target="_blank" id="btn-whatsapp"
+               class="flex items-center justify-center gap-2 w-full bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/40 text-[#25D366] font-bold py-2.5 rounded-xl transition-all text-sm mb-4">
+                <i class="fa-brands fa-whatsapp text-base"></i>
+                Enviar Comprovante no WhatsApp
+            </a>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex-1 h-px bg-slate-800"></div>
+                <span class="text-[9px] text-slate-600 font-bold uppercase tracking-widest">Já tem seu código?</span>
+                <div class="flex-1 h-px bg-slate-800"></div>
+            </div>
+
+            <!-- Campo código + botão -->
+            <div class="space-y-2.5">
+                <input type="text" id="lock-code-input" maxlength="20"
+                    placeholder="Ex: ESA-AB12CD"
+                    class="lock-input w-full rounded-xl px-4 py-3 text-white text-center text-base font-bold placeholder-slate-700"
+                    onkeypress="if(event.key==='Enter')window.validarCodigoAcesso()"
+                    oninput="this.value=this.value.toUpperCase()">
+
+                <p id="lock-error" class="text-red-400 text-xs text-center hidden font-medium"></p>
+                <p id="lock-success" class="text-green-400 text-xs text-center hidden font-medium">
+                    <i class="fa-solid fa-check-circle mr-1"></i>Código válido! Desbloqueando...
+                </p>
+
+                <button onclick="window.validarCodigoAcesso()" id="lock-btn"
+                    class="lock-btn w-full text-white py-3.5 rounded-xl text-lg">
+                    <i class="fa-solid fa-unlock mr-2"></i>DESBLOQUEAR ACESSO
+                </button>
+            </div>
+
+            <p class="text-center text-[9px] text-slate-700 mt-3">
+                Problemas? Fale no WhatsApp · Acesso seguro via código único
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL — ADMIN GESTÃO DE CÓDIGOS PIX
+═══════════════════════════════════════════════ -->
+<div id="modal-admin-codes" class="fixed inset-0 modal-overlay z-[90] hidden flex items-center justify-center p-4 modal-hidden no-print">
+    <div class="modal-box glass w-full max-w-md rounded-2xl relative max-h-[85vh] flex flex-col">
+        <div class="p-5 border-b border-slate-700/60">
+            <button onclick="closeModal('modal-admin-codes')" class="absolute top-4 right-4 text-slate-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-yellow-900/40 rounded-xl flex items-center justify-center border border-yellow-500/30">
+                    <i class="fa-solid fa-key text-yellow-400"></i>
+                </div>
+                <div>
+                    <h3 class="font-cond text-xl font-black text-white tracking-wide">Gestão de Acessos PIX</h3>
+                    <p class="text-[10px] text-slate-400">Gere e gerencie códigos de liberação</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-5 border-b border-slate-700/40">
+            <div class="flex gap-2">
+                <button onclick="window.gerarNovoCodigo()" id="btn-gerar-codigo"
+                    class="flex-1 bg-green-700/80 hover:bg-green-600 border border-green-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Gerar Código
+                </button>
+                <button onclick="window.carregarCodigos()" id="btn-refresh-codigos"
+                    class="btn-secondary text-slate-300 px-4 py-2.5 rounded-xl text-sm font-bold transition-all">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+            <!-- Código recém gerado -->
+            <div id="novo-codigo-box" class="hidden mt-3 glass-sm rounded-xl p-3 border border-green-500/30">
+                <div class="text-[9px] text-green-400 uppercase font-bold tracking-widest mb-1.5">✓ Novo código gerado — Envie ao aluno:</div>
+                <div class="flex items-center gap-2">
+                    <span id="novo-codigo-text" class="font-mono text-base font-black text-white flex-1 tracking-widest"></span>
+                    <button onclick="window.copiarNovoCodigo()" class="pix-copy-btn text-green-400 px-3 py-1.5 rounded-lg text-xs font-bold">
+                        <i class="fa-solid fa-copy"></i> Copiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de códigos -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-2" id="codigos-list">
+            <p class="text-slate-500 text-sm text-center py-6"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Carregando...</p>
+        </div>
+
+        <div class="p-4 border-t border-slate-700/40">
+            <div class="flex gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500"></span>Ativo</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-500"></span>Usado</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span>Revogado</span>
+            </div>
+        </div>
+    </div>
+</div>
 ═══════════════════════════════════════════════ -->
 <div class="fixed top-0 left-0 right-0 z-40 no-print">
     <div class="flex items-center justify-between px-4 py-3 glass-sm border-b border-slate-800/80">
@@ -710,7 +984,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // ── STATE ──────────────────────────────────────────
     let app, auth, db, appId, userId;
@@ -718,7 +992,7 @@
     window.timerTotalMinutos = 60;
 
     let progressoAluno = { totalVistos:0, materias:{}, acertos:0, erros:0, streak:0, lastStudyDate:null };
-    let timerInterval, tempoRestante=0, totalTempoTimer=1;
+    let timerInterval, tempoRestante=0, totalTempoTimer=3600;
     let missaoAtualContexto = null;
     let quizAcertosRodada = 0, quizErrosRodada = 0, quizRespondidas = 0, quizTotal = 5;
 
@@ -785,8 +1059,14 @@
         if(localStorage.getItem('esa_qg_acesso_criador')==='concedido' && !document.getElementById('admin-badge')) {
             const div=document.createElement('div');
             div.id='admin-badge';
-            div.className='glass-sm border border-yellow-500/40 text-yellow-400 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5';
-            div.innerHTML='<i class="fa-solid fa-crown"></i><span class="hidden sm:inline">CRIADOR</span>';
+            div.className='flex items-center gap-1.5';
+            div.innerHTML=`
+                <div class="glass-sm border border-yellow-500/40 text-yellow-400 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-crown"></i><span class="hidden sm:inline">CRIADOR</span>
+                </div>
+                <button onclick="window.abrirGestaoAcessos()" class="glass-sm border border-green-500/30 text-green-400 hover:text-green-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all hover:border-green-500/60">
+                    <i class="fa-solid fa-key"></i><span class="hidden sm:inline">Acessos PIX</span>
+                </button>`;
             document.getElementById('right-controls').appendChild(div);
         }
     };
@@ -794,13 +1074,18 @@
     // ── MODAIS HELPERS ─────────────────────────────────
     function openModal(id) {
         const m=document.getElementById(id);
+        if(!m) return;
         m.classList.remove('hidden'); m.classList.remove('modal-hidden');
     }
     function closeModal(id) {
         const m=document.getElementById(id);
+        if(!m) return;
         m.classList.add('modal-hidden');
         setTimeout(()=>m.classList.add('hidden'),350);
     }
+    // Expor no window para uso em onclick= do HTML
+    window.openModal  = openModal;
+    window.closeModal = closeModal;
 
     window.showAlert = function(msg) {
         document.getElementById('alert-message').innerText=msg;
@@ -933,6 +1218,20 @@
         window.aplicarAdminUI(); window.verificarOfensiva();
         window.atualizarPatenteUI(); window.initRadarChart();
 
+        // Inicializar tela PIX — aguardar QRious se necessário
+        const hasToken = localStorage.getItem('esa_qg_acesso_v2');
+        const isAdmin  = localStorage.getItem('esa_qg_acesso_criador') === 'concedido';
+        if (hasToken || isAdmin) {
+            document.getElementById('lock-screen').style.display = 'none';
+        } else {
+            // Tentar gerar QR imediatamente, com fallback se QRious ainda não carregou
+            if (typeof QRious !== 'undefined') {
+                initPixQR();
+            } else {
+                setTimeout(initPixQR, 500);
+            }
+        }
+
         let fbCfg = typeof __firebase_config!=='undefined' ? JSON.parse(__firebase_config) : {
             apiKey:"AIzaSyCmbO4oTcKgLgx4qyPlDjn-cYpUJJo5bcg",
             authDomain:"qg-esa.firebaseapp.com", projectId:"qg-esa",
@@ -949,7 +1248,13 @@
                 catch(e) { await signInAnonymously(auth); }
             } else { await signInAnonymously(auth); }
             onAuthStateChanged(auth,async u=>{
-                if(u) { userId=u.uid; window.atualizarIdentificacaoUI(); await window.loadFromCloud(); }
+                if(u) {
+                    userId=u.uid;
+                    window.atualizarIdentificacaoUI();
+                    await window.loadFromCloud();
+                    // Verificar acesso via Firebase (valida token salvo)
+                    window.verificarAcessoLocal();
+                }
             });
         } catch(e) { console.log("Firebase offline",e); }
     };
@@ -1493,13 +1798,406 @@ Retorne ESTRITAMENTE JSON válido:
     document.addEventListener('keydown', e => {
         if((e.ctrlKey||e.metaKey)&&e.key==='Enter') { window.iniciarProcessamento(); }
         if(e.key==='Escape') {
-            ['modal-ficha','modal-alert','modal-auth','modal-admin-prompt','modal-history'].forEach(id=>{
+            ['modal-ficha','modal-alert','modal-auth','modal-admin-prompt','modal-history','modal-admin-codes'].forEach(id=>{
                 if(!document.getElementById(id).classList.contains('hidden')) closeModal(id);
             });
             const chat=document.getElementById('chat-ia');
             if(chat.classList.contains('chat-visible')) { chat.classList.remove('chat-visible'); chat.classList.add('chat-hidden'); }
         }
     });
+
+    // ═══════════════════════════════════════════════════
+    // SISTEMA PIX — GERAÇÃO DE PAYLOAD EMV E QR CODE
+    // ═══════════════════════════════════════════════════
+
+    const PIX_KEY   = 'jhonykojiro9@gmail.com';
+    const PIX_NAME  = 'QG DO ALUNO ESA';
+    const PIX_CITY  = 'BRASIL';
+    const PIX_VALOR = '19.90';
+    const PIX_TXID  = 'QGESA2026';
+    const WHATSAPP_NUM = '5567992041956'; // ← Jhony - MS
+
+    function crc16ccitt(str) {
+        let crc = 0xFFFF;
+        for (let i = 0; i < str.length; i++) {
+            crc ^= str.charCodeAt(i) << 8;
+            for (let j = 0; j < 8; j++) {
+                crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+            }
+            crc &= 0xFFFF;
+        }
+        return crc;
+    }
+
+    function emvField(id, val) {
+        return `${id}${String(val.length).padStart(2,'0')}${val}`;
+    }
+
+    function gerarPixPayload() {
+        // Normalizar nome e cidade: apenas A-Z, espaço, sem acentos
+        const normalizarASCII = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9 ]/gi,'').toUpperCase();
+        const name = normalizarASCII(PIX_NAME).slice(0,25).trim();
+        const city = normalizarASCII(PIX_CITY).slice(0,15).trim();
+        const txid = PIX_TXID.replace(/[^A-Za-z0-9]/g,'').slice(0,25) || 'QGESA2026';
+
+        // Garantir amount com exatamente 2 casas decimais
+        const amount = parseFloat(PIX_VALOR).toFixed(2);
+
+        // Campo 26 — Merchant Account Information
+        const gui = emvField('00','BR.GOV.BCB.PIX') + emvField('01', PIX_KEY);
+        const mai = emvField('26', gui);
+
+        // Campo 62 — Additional Data
+        const addt = emvField('62', emvField('05', txid));
+
+        let payload =
+            emvField('00','01')      +   // Payload Format Indicator
+            emvField('01','12')      +   // Reusable (12)
+            mai                      +   // Merchant Account Info (PIX key)
+            emvField('52','0000')    +   // Merchant Category Code
+            emvField('53','986')     +   // Currency: BRL
+            emvField('54', amount)   +   // Transaction Amount
+            emvField('58','BR')      +   // Country Code
+            emvField('59', name)     +   // Merchant Name
+            emvField('60', city)     +   // Merchant City
+            addt                     +   // Additional Data (TxID)
+            '6304';                      // CRC placeholder (4 chars)
+
+        const crc = crc16ccitt(payload).toString(16).toUpperCase().padStart(4,'0');
+        return payload + crc;
+    }
+
+    let _pixInitRetries = 0;
+    function initPixQR() {
+        const payload = gerarPixPayload();
+        window._pixPayload = payload;
+
+        // Atualizar campo Copia e Cola
+        const display = document.getElementById('pix-code-display');
+        if (display) display.innerText = payload;
+
+        // Atualizar link WhatsApp
+        const waMsg = encodeURIComponent('Olá! Fiz o PIX de R$ 19,90 para o QG do Aluno ESA 2026. Segue o comprovante. Preciso do meu código de acesso! 🎖️');
+        const waBtn = document.getElementById('btn-whatsapp');
+        if (waBtn) waBtn.href = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUM}&text=${waMsg}`;
+
+        // Gerar QR Code — renderizar em alta resolução via toDataURL
+        if (typeof QRious === 'undefined') {
+            if (_pixInitRetries < 8) {
+                _pixInitRetries++;
+                setTimeout(initPixQR, 600);
+            } else {
+                // QRious nunca carregou — mostrar fallback
+                const wrap = document.getElementById('pix-qr-wrap');
+                if (wrap) wrap.innerHTML = '<div style="width:200px;height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d1b2a;border-radius:8px;border:1px solid rgba(34,197,94,0.3);gap:8px;"><i class="fa-solid fa-qrcode" style="font-size:40px;color:#16a34a;"></i><p style="color:#64748b;font-size:10px;text-align:center;padding:0 12px;">Use o botão Copiar abaixo</p></div>';
+            }
+            return;
+        }
+
+        try {
+            // Renderizar QR em 400px (alta res) → exibir como img 200px = nitidez 2x
+            const qr = new QRious({
+                value: payload,
+                size: 400,
+                background: '#ffffff',
+                foreground: '#111111',
+                level: 'M',
+                padding: 16
+            });
+
+            const img = document.createElement('img');
+            img.src = qr.toDataURL('image/png');
+            img.width  = 200;
+            img.height = 200;
+            img.style.cssText = 'display:block;border-radius:6px;image-rendering:crisp-edges;';
+            img.alt = 'QR Code PIX R$ 19,90';
+
+            // Substituir canvas pela imagem nítida
+            const canvas = document.getElementById('pix-qr-canvas');
+            if (canvas) {
+                canvas.parentElement.replaceChild(img, canvas);
+            } else {
+                // canvas já foi substituído antes, achar o img existente
+                const existingImg = document.querySelector('#pix-qr-wrap img');
+                if (existingImg) existingImg.src = img.src;
+            }
+        } catch(e) {
+            console.warn('QR Code erro:', e);
+            const wrap = document.getElementById('pix-qr-wrap');
+            if (wrap) wrap.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;background:#0d1b2a;border-radius:8px;border:1px solid rgba(34,197,94,0.2);"><p style="color:#22c55e;font-size:9px;text-align:center;padding:12px;font-family:monospace;">Use Copia e Cola →</p></div>';
+        }
+    }
+
+    window.copiarPix = function() {
+        const payload = window._pixPayload || gerarPixPayload();
+        const btn = document.getElementById('btn-copy-pix');
+        const lbl = document.getElementById('btn-copy-label');
+
+        function mostrarSucesso() {
+            if (!btn || !lbl) return;
+            btn.style.borderColor = 'rgba(34,197,94,0.8)';
+            lbl.innerText = '✓ Copiado!';
+            setTimeout(() => {
+                btn.style.borderColor = '';
+                lbl.innerText = 'Copiar';
+            }, 2500);
+        }
+        function mostrarErro() {
+            if (!lbl) return;
+            lbl.innerText = 'Erro!';
+            setTimeout(() => { lbl.innerText = 'Copiar'; }, 2000);
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(payload).then(mostrarSucesso).catch(() => {
+                // Fallback execCommand
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = payload;
+                    ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+                    document.body.appendChild(ta);
+                    ta.focus(); ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    mostrarSucesso();
+                } catch(e2) { mostrarErro(); }
+            });
+        } else {
+            // Fallback direto para HTTP ou ambientes sem clipboard API
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = payload;
+                ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+                document.body.appendChild(ta);
+                ta.focus(); ta.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                ok ? mostrarSucesso() : mostrarErro();
+            } catch(e) { mostrarErro(); }
+        }
+    };
+
+    // ═══════════════════════════════════════════════════
+    // SISTEMA DE ACESSO — VALIDAÇÃO DE CÓDIGO
+    // ═══════════════════════════════════════════════════
+
+    const ACCESS_TOKEN_KEY = 'esa_qg_acesso_v2';
+
+    window.verificarAcessoLocal = function() {
+        const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+        if (token) {
+            document.getElementById('lock-screen').style.display = 'none';
+            if (userCheck()) { window.validarTokenBackground(token); }
+            return true;
+        }
+        if (localStorage.getItem('esa_qg_acesso_criador') === 'concedido') {
+            document.getElementById('lock-screen').style.display = 'none';
+            return true;
+        }
+        // Sem token — mostrar lock e garantir QR inicializado
+        document.getElementById('lock-screen').style.display = 'flex';
+        if (typeof QRious !== 'undefined' && !window._pixPayload) { initPixQR(); }
+        return false;
+    };
+
+    window.validarTokenBackground = async function(code) {
+        if (!userCheck()) return;
+        try {
+            const snap = await getDoc(doc(db,'artifacts',appId,'public','data','access_codes',code));
+            if (!snap.exists() || snap.data().revogado === true) {
+                // Código foi revogado pelo admin
+                localStorage.removeItem(ACCESS_TOKEN_KEY);
+                document.getElementById('lock-screen').style.display = 'flex';
+                initPixQR();
+            }
+        } catch(e) {}
+    };
+
+    window.validarCodigoAcesso = async function() {
+        const input = document.getElementById('lock-code-input');
+        const errEl = document.getElementById('lock-error');
+        const sucEl = document.getElementById('lock-success');
+        const btn   = document.getElementById('lock-btn');
+        const code  = input.value.trim().toUpperCase();
+
+        errEl.classList.add('hidden');
+        sucEl.classList.add('hidden');
+
+        if (!code || code.length < 4) {
+            errEl.innerText = 'Digite o código recebido após o pagamento.';
+            errEl.classList.remove('hidden');
+            input.classList.add('error');
+            setTimeout(() => input.classList.remove('error'), 500);
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>VERIFICANDO...';
+
+        // Aguardar Firebase estar pronto (até 8s)
+        let tentativas = 0;
+        while (!userCheck() && tentativas < 16) {
+            await new Promise(r => setTimeout(r, 500));
+            tentativas++;
+        }
+
+        try {
+            if (!userCheck()) throw new Error('Sem conexão com a nuvem. Verifique sua internet e tente novamente.');
+
+            const ref  = doc(db,'artifacts',appId,'public','data','access_codes',code);
+            const snap = await getDoc(ref);
+
+            if (!snap.exists()) throw new Error('Código não encontrado. Verifique se digitou corretamente.');
+            const d = snap.data();
+            if (d.revogado === true) throw new Error('Este código foi revogado. Entre em contato via WhatsApp.');
+
+            // ✅ Código válido
+            localStorage.setItem(ACCESS_TOKEN_KEY, code);
+
+            // Marcar como usado (se ainda não foi)
+            if (!d.usadoEm) {
+                await setDoc(ref, { usadoEm: new Date().toISOString(), usado: true }, { merge: true });
+            }
+
+            sucEl.classList.remove('hidden');
+            input.style.borderColor = 'rgba(34,197,94,0.7)';
+            if (typeof playTone === 'function') {
+                playTone(600,'sine',0.1,0.08);
+                setTimeout(()=>playTone(900,'sine',0.2,0.08),120);
+            }
+
+            setTimeout(() => {
+                const ls = document.getElementById('lock-screen');
+                ls.classList.add('unlocked');
+                setTimeout(() => { ls.style.display = 'none'; ls.classList.remove('unlocked'); }, 700);
+            }, 800);
+
+        } catch(err) {
+            errEl.innerText = '✗ ' + err.message;
+            errEl.classList.remove('hidden');
+            input.classList.add('error');
+            setTimeout(() => input.classList.remove('error'), 500);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-unlock mr-2"></i>DESBLOQUEAR ACESSO';
+        }
+    };
+
+    // ═══════════════════════════════════════════════════
+    // ADMIN — GESTÃO DE CÓDIGOS DE ACESSO
+    // ═══════════════════════════════════════════════════
+
+    window.abrirGestaoAcessos = function() {
+        openModal('modal-admin-codes');
+        window.carregarCodigos();
+    };
+
+    function gerarCodigoString() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = 'ESA-';
+        for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+        return code;
+    }
+
+    window.gerarNovoCodigo = async function() {
+        const btn = document.getElementById('btn-gerar-codigo');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Gerando...';
+
+        // Aguardar Firebase se necessário
+        let t = 0;
+        while (!userCheck() && t < 10) { await new Promise(r=>setTimeout(r,500)); t++; }
+        if (!userCheck()) {
+            window.showAlert('Nuvem não conectada. Aguarde e tente novamente.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-plus"></i> Gerar Código';
+            return;
+        }
+
+        const code = gerarCodigoString();
+        try {
+            await setDoc(doc(db,'artifacts',appId,'public','data','access_codes',code), {
+                criadoEm: new Date().toISOString(),
+                usado: false,
+                revogado: false,
+                usadoEm: null
+            });
+            document.getElementById('novo-codigo-text').innerText = code;
+            window._ultimoCodigo = code;
+            document.getElementById('novo-codigo-box').classList.remove('hidden');
+            await window.carregarCodigos();
+        } catch(e) { window.showAlert('Erro ao gerar código: ' + e.message); }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-plus"></i> Gerar Código';
+    };
+
+    window.copiarNovoCodigo = function() {
+        const code = window._ultimoCodigo;
+        if (!code) return;
+        navigator.clipboard.writeText(code).catch(()=>{});
+        window.showAlert(`Código ${code} copiado! Envie ao aluno via WhatsApp.`);
+    };
+
+    window.revogarCodigo = async function(code) {
+        if (!userCheck()) return;
+        if (!confirm(`Revogar código ${code}? O aluno perderá acesso.`)) return;
+        try {
+            await setDoc(doc(db,'artifacts',appId,'public','data','access_codes',code), { revogado: true }, { merge: true });
+            await window.carregarCodigos();
+        } catch(e) { window.showAlert('Erro: ' + e.message); }
+    };
+
+    window.carregarCodigos = async function() {
+        if (!userCheck()) {
+            // Aguardar até 5s para Firebase conectar
+            let t = 0;
+            while (!userCheck() && t < 10) { await new Promise(r=>setTimeout(r,500)); t++; }
+            if (!userCheck()) return;
+        }
+        const list = document.getElementById('codigos-list');
+        list.innerHTML = '<p class="text-slate-500 text-sm text-center py-6"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Carregando...</p>';
+
+        try {
+            const colRef = collection(db,'artifacts',appId,'public','data','access_codes');
+            const snap   = await getDocs(query(colRef, limit(50)));
+
+            if (snap.empty) {
+                list.innerHTML = '<p class="text-slate-500 text-sm text-center py-6">Nenhum código gerado ainda.</p>';
+                return;
+            }
+
+            let html = '';
+            snap.forEach(d => {
+                const c = d.id, data = d.data();
+                const status = data.revogado ? 'revoked' : (data.usado ? 'used' : 'active');
+                const statusLabel = data.revogado
+                    ? '<span class="text-red-400">Revogado</span>'
+                    : (data.usado ? '<span class="text-slate-400">Usado</span>' : '<span class="text-green-400">Ativo</span>');
+                const dt = data.usadoEm
+                    ? new Date(data.usadoEm).toLocaleDateString('pt-BR')
+                    : (data.criadoEm ? new Date(data.criadoEm).toLocaleDateString('pt-BR') : '—');
+                const revogar = !data.revogado
+                    ? `<button onclick="window.revogarCodigo('${c}')" class="text-red-500 hover:text-red-400 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-900/30 transition-all text-xs" title="Revogar"><i class="fa-solid fa-ban"></i></button>`
+                    : '';
+                html += `
+                    <div class="code-chip ${status} rounded-xl px-3 py-2.5 flex items-center justify-between gap-2">
+                        <div>
+                            <div class="font-bold text-white tracking-widest text-sm">${c}</div>
+                            <div class="text-[9px] text-slate-500 mt-0.5">${statusLabel} · ${dt}</div>
+                        </div>
+                        <div class="flex gap-1.5 flex-shrink-0">
+                            <button onclick="navigator.clipboard.writeText('${c}').catch(()=>{})" class="text-slate-400 hover:text-white w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-700 transition-all text-xs" title="Copiar">
+                                <i class="fa-solid fa-copy"></i>
+                            </button>
+                            ${revogar}
+                        </div>
+                    </div>`;
+            });
+            list.innerHTML = html || '<p class="text-slate-500 text-sm text-center py-6">Nenhum código.</p>';
+        } catch(e) {
+            list.innerHTML = `<p class="text-red-400 text-sm text-center py-6"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Erro: ${e.message}</p>`;
+        }
+    };
 
     // ── INICIALIZAR ────────────────────────────────────
     window.initApp();
